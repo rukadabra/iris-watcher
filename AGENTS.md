@@ -106,7 +106,7 @@ Kunci yang dipakai bot dan web: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_C
 
 Kunci player: `PLAYER_TOKEN` (minimal 16 karakter, sama dengan yang dibaca bot), `PLAYER_HOST`, `PLAYER_PORT`, `YTDLP_PATH`, `FFMPEG_PATH`.
 
-Lokal memakai Postgres dan Redis di `127.0.0.1`. Di dalam Compose, URL database dan Redis menunjuk hostname service `postgres` dan `redis`. `tsx watch` tidak memuat ulang `.env`. Setelah `.env` berubah, prosesnya harus dinyalakan ulang.
+Lokal memakai Postgres dan Redis di `127.0.0.1`. Di Dokploy, `DATABASE_URL` dan `REDIS_URL` diisi dari layanan yang sudah ada. `tsx watch` tidak memuat ulang `.env`. Setelah `.env` berubah, prosesnya harus dinyalakan ulang.
 
 `HEALTH_PORT` lokal bot adalah 8081 karena port 8080 di mesin pengembangan ini dipakai nginx. Di dalam kontainer bot, health tetap 8080 dan tidak dipublikasikan.
 
@@ -115,7 +115,7 @@ Lokal memakai Postgres dan Redis di `127.0.0.1`. Di dalam Compose, URL database 
 Butuh yt-dlp dan ffmpeg di PATH mesin yang menjalankan player. Di Mac pengembangan, keduanya dari Homebrew. Bot sendiri tidak memutar file lokal.
 
 ```bash
-docker compose up postgres redis -d
+docker compose --profile local up postgres redis -d
 pnpm install
 pnpm dev
 ```
@@ -130,7 +130,7 @@ Player bind ke `127.0.0.1` supaya tidak terbuka ke jaringan.
 
 ## Deploy
 
-Dokploy memakai `docker-compose.yml` dengan Isolated Deployments. Domain dipasang ke service `web` port 3000. Service yang naik: `postgres`, `redis`, `bot`, `web`.
+Dokploy memakai `docker-compose.yml`. Domain dipasang ke service `web` port 3000. Service yang naik: `bot` dan `web`. `DATABASE_URL` dan `REDIS_URL` menunjuk ke Postgres dan Redis yang sudah ada.
 
 Bot tidak punya port publik. Satu replika. `PLAYER_URL` dan `PLAYER_TOKEN` diisi di lingkungan bot.
 
