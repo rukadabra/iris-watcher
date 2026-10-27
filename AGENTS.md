@@ -115,6 +115,7 @@ Lokal memakai Postgres dan Redis di `127.0.0.1`. Di Dokploy, `DATABASE_URL` dan 
 Butuh yt-dlp dan ffmpeg di PATH mesin yang menjalankan player. Di Mac pengembangan, keduanya dari Homebrew. Bot sendiri tidak memutar file lokal.
 
 ```bash
+docker compose --profile local up postgres redis -d
 pnpm install
 pnpm dev
 ```
