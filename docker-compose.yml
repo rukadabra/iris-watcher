@@ -1,8 +1,10 @@
-# Dokploy: aktifkan Isolated Deployments, lalu pasang domain ke service `web` pada port 3000.
+# Dokploy: pasang domain ke service `web` pada port 3000.
+# DATABASE_URL dan REDIS_URL mengarah ke Postgres dan Redis yang sudah ada.
 # Bot tidak punya port publik. Jalankan satu replika: dua koneksi Gateway dengan token yang sama saling memutus sesi.
 
 services:
   postgres:
+    profiles: ["local"]
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
@@ -20,6 +22,7 @@ services:
       retries: 12
 
   redis:
+    profiles: ["local"]
     image: redis:7-alpine
     restart: unless-stopped
     ports:
@@ -37,18 +40,13 @@ services:
     restart: unless-stopped
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
-      DATABASE_URL: postgresql://iris:${POSTGRES_PASSWORD:-iris}@postgres:5432/iris
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
       DEFAULT_PREFIX: ${DEFAULT_PREFIX:-!iris}
       HEALTH_PORT: 8080
       PLAYER_URL: ${PLAYER_URL:-}
       PLAYER_TOKEN: ${PLAYER_TOKEN:-}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test:
         [
@@ -73,8 +71,8 @@ services:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       PLAYER_URL: ${PLAYER_URL:-}
       PLAYER_TOKEN: ${PLAYER_TOKEN:-}
-      DATABASE_URL: postgresql://iris:${POSTGRES_PASSWORD:-iris}@postgres:5432/iris
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
       DEFAULT_PREFIX: ${DEFAULT_PREFIX:-!iris}
       HOSTNAME: 0.0.0.0
@@ -83,11 +81,6 @@ services:
       - "127.0.0.1:3000:3000"
     expose:
       - "3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test:
         [

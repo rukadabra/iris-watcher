@@ -23,7 +23,7 @@ Run one Gateway process. Two processes with the same `DISCORD_TOKEN` disconnect 
 
 ```bash
 cp .env.example .env
-docker compose up postgres redis -d
+docker compose --profile local up postgres redis -d
 pnpm install
 pnpm dev
 ```
@@ -67,7 +67,7 @@ The person who starts music must already be in a normal voice channel. Iris need
 
 ## Deploy
 
-Dokploy uses `docker-compose.yml` with Isolated Deployments. Attach the domain to the `web` service on port 3000. The services that start are `postgres`, `redis`, `bot`, and `web`.
+Dokploy uses `docker-compose.yml`. Attach the domain to the `web` service on port 3000. The services that start are `bot` and `web`. Set `DATABASE_URL` and `REDIS_URL` to the Postgres and Redis that already exist.
 
 The bot has no public port. Keep it at one replica. Set `PLAYER_URL` and `PLAYER_TOKEN` in the bot environment.
 
