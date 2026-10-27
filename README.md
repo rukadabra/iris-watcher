@@ -8,7 +8,6 @@ A server manager can change that server's prefix, YouTube live alerts, and which
 
 - Node.js 24.17 or newer
 - pnpm 10.33.3
-- Docker, for Postgres and Redis
 - yt-dlp and ffmpeg on the machine that runs the player
 
 In the Discord Developer Portal, turn on the Message Content intent. Register this OAuth redirect:
@@ -23,12 +22,11 @@ Run one Gateway process. Two processes with the same `DISCORD_TOKEN` disconnect 
 
 ```bash
 cp .env.example .env
-docker compose --profile local up postgres redis -d
 pnpm install
 pnpm dev
 ```
 
-Fill in `.env` before starting. `pnpm dev` starts the bot, the site, and the player.
+Fill in `.env` before starting. `DATABASE_URL` and `REDIS_URL` point at Postgres and Redis that are already running. `pnpm dev` starts the bot, the site, and the player.
 
 - Site: http://localhost:3000
 - Bot health: http://127.0.0.1:8081/health
