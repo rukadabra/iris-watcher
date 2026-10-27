@@ -1,0 +1,30 @@
+import { boolean, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core"
+
+export const guilds = pgTable("guilds", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  prefix: text("prefix"),
+  liveChannelId: text("live_channel_id"),
+  disabledCommands: text("disabled_commands").array().notNull().default([]),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type GuildRecord = typeof guilds.$inferSelect
+
+export const liveWatches = pgTable(
+  "live_watches",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    discordChannelId: text("discord_channel_id").notNull(),
+    youtubeChannelId: text("youtube_channel_id").notNull(),
+    name: text("name").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    liveVideoId: text("live_video_id"),
+  },
+  (table) => [primaryKey({ columns: [table.guildId, table.youtubeChannelId] })],
+)
+
+export type LiveWatch = typeof liveWatches.$inferSelect

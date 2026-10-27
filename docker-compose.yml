@@ -1,0 +1,118 @@
+# Dokploy: aktifkan Isolated Deployments, lalu pasang domain ke service `web` pada port 3000.
+# Bot tidak punya port publik. Jalankan satu replika: dua koneksi Gateway dengan token yang sama saling memutus sesi.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: iris
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iris}
+      POSTGRES_DB: iris
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iris -d iris"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  bot:
+    build:
+      context: .
+      dockerfile: apps/bot/Dockerfile
+    restart: unless-stopped
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DATABASE_URL: postgresql://iris:${POSTGRES_PASSWORD:-iris}@postgres:5432/iris
+      REDIS_URL: redis://redis:6379
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      DEFAULT_PREFIX: ${DEFAULT_PREFIX:-!iris}
+      HEALTH_PORT: 8080
+      PLAYER_URL: ${PLAYER_URL:-}
+      PLAYER_TOKEN: ${PLAYER_TOKEN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      PLAYER_URL: ${PLAYER_URL:-}
+      PLAYER_TOKEN: ${PLAYER_TOKEN:-}
+      DATABASE_URL: postgresql://iris:${POSTGRES_PASSWORD:-iris}@postgres:5432/iris
+      REDIS_URL: redis://redis:6379
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      DEFAULT_PREFIX: ${DEFAULT_PREFIX:-!iris}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  player:
+    profiles: ["player"]
+    build:
+      context: .
+      dockerfile: apps/player/Dockerfile
+    restart: unless-stopped
+    environment:
+      PLAYER_TOKEN: ${PLAYER_TOKEN}
+      PLAYER_HOST: 0.0.0.0
+      PLAYER_PORT: 8090
+    ports:
+      - "127.0.0.1:8090:8090"
+
+volumes:
+  postgres-data:

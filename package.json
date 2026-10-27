@@ -1,0 +1,19 @@
+{
+  "name": "iris-watcher",
+  "private": true,
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=24.17"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @iris/bot --filter @iris/web --filter @iris/player dev",
+    "dev:bot": "pnpm --filter @iris/bot dev",
+    "dev:web": "pnpm --filter @iris/web dev",
+    "build": "pnpm --filter @iris/bot build && pnpm --filter @iris/web build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm --filter @iris/shared --filter @iris/bot --filter @iris/player test"
+  }
+}
