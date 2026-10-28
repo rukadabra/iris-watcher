@@ -16,7 +16,7 @@ Dokumen ini untuk agent Cursor yang membuka repo yang sama di mesin lain. Jangan
 
 - `apps/bot` — discord.js 14.27.0, satu koneksi Gateway, voice, health di dalam proses.
 - `apps/web` — Next.js 16, landing dan dashboard. Dashboard mengubah prefix, daftar pantauan siaran, dan perintah yang menyala di server itu. `output: "standalone"`.
-- `apps/player` — membaca YouTube dengan `yt-dlp` dan mengalirkan audio Ogg Opus lewat ffmpeg. Tidak memegang token Discord.
+- `apps/player` — membaca YouTube dengan `yt-dlp` dan mengalirkan PCM lewat ffmpeg. Tidak memegang token Discord.
 - `packages/shared` — prefix, daftar perintah, URL undang bot, parser tautan YouTube.
 - `packages/db` — Postgres, tabel `guilds`.
 - Redis — cache prefix, sesi dashboard, heartbeat status.
@@ -25,7 +25,7 @@ Node.js minimal 24.17, karena `@discordjs/voice` 0.19.2 mensyaratkan itu. Packag
 
 ## Voice dan YouTube
 
-`@discordjs/voice` 0.19.2. Enkripsi `aes-256-gcm` sudah ada di Node, jadi library sodium tidak dipasang. DAVE memakai `@snazzah/davey` yang ikut bersama paket voice. Opus memakai `opusscript`. ffmpeg wajib ada di mesin player untuk YouTube. Bot menerima audio Ogg Opus, jadi mesin bot tidak membutuhkan ffmpeg.
+`@discordjs/voice` 0.19.2. Enkripsi `aes-256-gcm` sudah ada di Node, jadi library sodium tidak dipasang. DAVE memakai `@snazzah/davey` yang ikut bersama paket voice. Opus memakai `opusscript`. ffmpeg wajib ada di mesin player untuk YouTube. Player mengirim PCM 16-bit stereo 48 kHz. Bot mengubahnya menjadi Opus dan mengatur keras suara di situ, jadi mesin bot tidak membutuhkan ffmpeg.
 
 Dokumen paket: https://discord.js.org/docs/packages/voice/0.19.2
 
@@ -33,7 +33,7 @@ Alurnya:
 
 1. Pengguna mengirim perintah di Discord.
 2. Bot meminta metadata ke `PLAYER_URL` dengan `Authorization: Bearer PLAYER_TOKEN`.
-3. Player membaca YouTube lalu mengirim audio `audio/ogg`.
+3. Player membaca YouTube lalu mengirim audio PCM.
 4. Bot memutar aliran itu di voice channel.
 
 Player hanya menerima id video dan id playlist yang sudah divalidasi, plus judul pencarian pada `POST /search`. Pencarian selalu memakai `ytsearch1:` di yt-dlp. Jangan mengubahnya menjadi pengunduh URL bebas.
@@ -48,6 +48,7 @@ Perilaku `play`:
 - `play new ...` mengganti antrean yang sedang berjalan. `play baru` tetap dikenali.
 - `play` saat lagu sedang berjalan menambahkan lagu ke antrean. `play new` mengganti antrean.
 - `pause` pauses, `resume` continues, `next` (or `skip`) plays the next song, `stop` clears the queue.
+- Tombol 🔉 dan 🔊 pada kartu pemutaran mengubah keras suara lagu yang sedang berjalan, langkah 10%, dari 0% sampai 200%. Nilai 100% adalah keras aslinya. Pengaturan ini mengikuti sesi voice itu dan kembali ke 100% setelah Iris keluar.
 - Saat lagu berganti sendiri, Iris mengirim kartu pemutaran baru di channel yang sama.
 - `loop one` mengulang lagu yang sedang diputar. `loop all` mengulang antrean dari awal. `loop off` mematikannya. `satu`, `semua`, dan `mati` tetap dikenali. `next` tetap pindah lagu.
 - `queue` menampilkan 8 lagu per halaman. `queue next` atau tombol halaman membuka halaman selanjutnya. `queue berikutnya` tetap dikenali.

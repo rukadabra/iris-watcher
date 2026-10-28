@@ -7,7 +7,7 @@ import type { BotEnv } from "./env"
 import type { PrefixStore } from "./prefix-store"
 import { chooseLiveChannel, LIVE_PICK_ID } from "./live"
 import { present, reply, safe, warn } from "./reply"
-import { botVoiceChannel, describeQueue, pausePlayback, resumePlayback, skipTrack, stopPlayback, toggleLoop, watchAlone } from "./voice"
+import { adjustVolume, botVoiceChannel, describeQueue, pausePlayback, resumePlayback, skipTrack, stopPlayback, toggleLoop, watchAlone } from "./voice"
 
 const recentCommands = new Map<string, number>()
 
@@ -92,7 +92,7 @@ async function onButton(interaction: ButtonInteraction, commandGate: CommandStor
     return
   }
 
-  const playback = action === "pause" || action === "resume" || action === "stop" || action === "next" || action === "loop"
+  const playback = action === "pause" || action === "resume" || action === "stop" || action === "next" || action === "loop" || action === "volume"
   if (!playback) {
     await interaction.deferUpdate()
     return
@@ -116,6 +116,10 @@ async function onButton(interaction: ButtonInteraction, commandGate: CommandStor
     await interaction.deferUpdate()
     return
   }
+  if (action === "volume" && extra !== "up" && extra !== "down") {
+    await interaction.deferUpdate()
+    return
+  }
 
   const result =
     action === "pause"
@@ -126,7 +130,9 @@ async function onButton(interaction: ButtonInteraction, commandGate: CommandStor
           ? stopPlayback(guildId)
           : action === "loop"
             ? toggleLoop(guildId, extra === "all" ? "all" : "one")
-            : skipTrack(guildId)
+            : action === "volume"
+              ? adjustVolume(guildId, extra === "up" ? "up" : "down")
+              : skipTrack(guildId)
 
   if (result.tone === "warn") {
     await interaction.reply({

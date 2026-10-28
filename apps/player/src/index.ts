@@ -159,7 +159,7 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
     opened.stream.once("data", (chunk: Buffer) => {
       clearTimeout(timer)
       started = true
-      response.writeHead(200, { "Content-Type": "audio/ogg", "Cache-Control": "no-store" })
+      response.writeHead(200, { "Content-Type": "application/octet-stream", "Cache-Control": "no-store" })
       response.write(chunk)
       opened.stream.pipe(response)
     })

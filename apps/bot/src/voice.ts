@@ -7,6 +7,7 @@ import {
   entersState,
   joinVoiceChannel,
   type AudioPlayer,
+  type AudioResource,
   type VoiceConnection,
 } from "@discordjs/voice"
 import type { YoutubeItem } from "@iris/shared"
@@ -18,6 +19,9 @@ import { note, present, safe, scene, warn, type Note } from "./reply"
 const RADIO_LIMIT = 40
 const PAGE_SIZE = 8
 const ALONE_MS = 60_000
+const VOLUME_MIN = 0
+const VOLUME_MAX = 200
+const VOLUME_STEP = 10
 
 type LoopMode = "off" | "one" | "all"
 
@@ -54,6 +58,8 @@ type Session = {
   skipRequested: boolean
   openedQuietly: string | null
   heardAt: number
+  volume: number
+  resource: AudioResource | null
 }
 
 const sessions = new Map<string, Session>()
@@ -144,7 +150,10 @@ async function startCurrent(session: Session, track: Track): Promise<void> {
     stream.destroy()
     return
   }
-  session.player.play(createAudioResource(stream, { inputType: StreamType.OggOpus }))
+  const resource = createAudioResource(stream, { inputType: StreamType.Raw, inlineVolume: true })
+  session.resource = resource
+  resource.volume?.setVolume(session.volume / 100)
+  session.player.play(resource)
 }
 
 async function pullRadio(session: Session): Promise<Track | null> {
@@ -204,6 +213,7 @@ function controlsFor(session: Session): Note["controls"] {
     page,
     pages,
     loop: session.loop,
+    volume: session.volume,
   }
 }
 
@@ -223,7 +233,9 @@ function syncPresence(): void {
 
 function shown(session: Session, item: Note): Note {
   if (!session.current && session.queue.length === 0) return item
-  return { ...item, controls: controlsFor(session) }
+  const volume = `-# Volume ${session.volume}%.`
+  const description = item.description ? `${item.description}\n${volume}` : volume
+  return { ...item, description, controls: controlsFor(session) }
 }
 
 export function attachControls(guildId: string, item: Note): Note {
@@ -360,6 +372,8 @@ function ensureSession(channel: VoiceChannel): Session {
     skipRequested: false,
     openedQuietly: null,
     heardAt: 0,
+    volume: 100,
+    resource: null,
   }
   sessions.set(channel.guild.id, session)
 
@@ -522,6 +536,15 @@ export function setLoop(guildId: string, mode: LoopMode): Note {
   const session = sessions.get(guildId)
   if (!session?.current) return warn("Queue is empty", "Nothing is playing.")
   return applyLoop(session, mode)
+}
+
+export function adjustVolume(guildId: string, direction: "up" | "down"): Note {
+  const session = sessions.get(guildId)
+  if (!session?.current) return warn("Queue is empty", "Nothing is playing.")
+  const delta = direction === "up" ? VOLUME_STEP : -VOLUME_STEP
+  session.volume = Math.min(VOLUME_MAX, Math.max(VOLUME_MIN, session.volume + delta))
+  session.resource?.volume?.setVolume(session.volume / 100)
+  return playingNote(session, direction === "up" ? "🔊 Volume" : "🔉 Volume")
 }
 
 export function toggleLoop(guildId: string, mode: "one" | "all"): Note {
