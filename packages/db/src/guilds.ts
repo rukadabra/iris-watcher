@@ -36,6 +36,26 @@ export async function setDisabledCommands(id: string, names: string[]): Promise<
   return rows.length > 0
 }
 
+const VOLUME_DEFAULT = 10
+
+export async function getGuildVolume(id: string): Promise<number> {
+  const rows = await getDb().select({ volume: guilds.volume }).from(guilds).where(eq(guilds.id, id)).limit(1)
+  return rows[0]?.volume ?? VOLUME_DEFAULT
+}
+
+export async function setGuildVolume(id: string, volume: number): Promise<void> {
+  const updated = await getDb()
+    .update(guilds)
+    .set({ volume, updatedAt: new Date() })
+    .where(eq(guilds.id, id))
+    .returning({ id: guilds.id })
+  if (updated.length > 0) return
+  await getDb().insert(guilds).values({ id, volume }).onConflictDoUpdate({
+    target: guilds.id,
+    set: { volume, updatedAt: new Date() },
+  })
+}
+
 export async function setGuildPrefix(id: string, prefix: string | null): Promise<boolean> {
   const rows = await getDb()
     .update(guilds)

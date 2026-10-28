@@ -122,16 +122,16 @@ async function onButton(interaction: ButtonInteraction, commandGate: CommandStor
   }
 
   const result =
-    action === "pause"
-      ? pausePlayback(guildId)
-      : action === "resume"
-        ? resumePlayback(guildId)
-        : action === "stop"
-          ? stopPlayback(guildId)
-          : action === "loop"
-            ? toggleLoop(guildId, extra === "all" ? "all" : "one")
-            : action === "volume"
-              ? adjustVolume(guildId, extra === "up" ? "up" : "down")
+    action === "volume"
+      ? await adjustVolume(guildId, extra === "up" ? "up" : "down")
+      : action === "pause"
+        ? pausePlayback(guildId)
+        : action === "resume"
+          ? resumePlayback(guildId)
+          : action === "stop"
+            ? stopPlayback(guildId)
+            : action === "loop"
+              ? toggleLoop(guildId, extra === "all" ? "all" : "one")
               : skipTrack(guildId)
 
   if (result.tone === "warn") {
