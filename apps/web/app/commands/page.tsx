@@ -14,11 +14,7 @@ export default function CommandsPage() {
         <h1>Commands</h1>
         <p>
           The examples below use the default prefix {DEFAULT_PREFIX}. A server that changed its
-          prefix uses that value instead. <span className="prefix-preview">play baru</span>,{" "}
-          <span className="prefix-preview">queue berikutnya</span>, and{" "}
-          <span className="prefix-preview">loop satu</span>,{" "}
-          <span className="prefix-preview">semua</span>, or{" "}
-          <span className="prefix-preview">mati</span> are accepted too.
+          prefix uses that value instead.
         </p>
         <p>
           While a song plays, the card has pause, resume, next, stop, queue pages, loop, and volume.

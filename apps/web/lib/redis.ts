@@ -4,7 +4,7 @@ let redis: Redis | null = null
 
 export function getRedis(): Redis {
   const url = process.env.REDIS_URL
-  if (!url) throw new Error("REDIS_URL belum diisi")
+  if (!url) throw new Error("REDIS_URL is not set")
   if (!redis) {
     redis = new Redis(url, {
       lazyConnect: true,

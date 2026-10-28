@@ -80,8 +80,6 @@ Examples use the default prefix. A server with a custom prefix uses that prefix 
 | `!iris live list` | Shows this server's channels |
 | `!iris live remove <channel>` | Removes one channel from this server |
 
-`play baru`, `queue berikutnya`, and `loop satu`, `loop semua`, and `loop mati` are accepted too.
-
 The playback card also has buttons for pause, resume, next, stop, queue pages, loop, and volume. Volume moves by 10%. Each server keeps its own level.
 
 The person who starts music must already be in a normal voice channel. Iris needs Connect and Speak there. If nobody else stays in that channel for one minute, Iris leaves. Other bots are not counted.

@@ -40,7 +40,7 @@ export async function exchangeCode(
     }),
     cache: "no-store",
   })
-  if (!response.ok) throw new Error("Tukar kode Discord gagal")
+  if (!response.ok) throw new Error("Discord code exchange failed")
   return (await response.json()) as DiscordToken
 }
 
@@ -49,7 +49,7 @@ export async function fetchDiscordUser(accessToken: string): Promise<DiscordUser
     headers: { authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   })
-  if (!response.ok) throw new Error("Profil Discord gagal dibaca")
+  if (!response.ok) throw new Error("Discord profile could not be read")
   return (await response.json()) as DiscordUser
 }
 
@@ -89,7 +89,7 @@ export async function fetchDiscordGuilds(accessToken: string): Promise<DiscordGu
       headers: { authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     })
-    if (!response.ok) throw new Error("Daftar server Discord gagal dibaca")
+    if (!response.ok) throw new Error("Discord server list could not be read")
     const page = (await response.json()) as DiscordGuild[]
     guilds.push(...page)
     const last = page.at(-1)
