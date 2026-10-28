@@ -1,4 +1,4 @@
-import { boolean, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core"
+import { boolean, pgTable, primaryKey, smallint, text, timestamp } from "drizzle-orm/pg-core"
 
 export const guilds = pgTable("guilds", {
   id: text("id").primaryKey(),
@@ -6,6 +6,7 @@ export const guilds = pgTable("guilds", {
   prefix: text("prefix"),
   liveChannelId: text("live_channel_id"),
   disabledCommands: text("disabled_commands").array().notNull().default([]),
+  volume: smallint("volume").notNull().default(10),
   joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })

@@ -34,7 +34,14 @@ CREATE TABLE IF NOT EXISTS live_watches (
 
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS live_channel_id text;
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS disabled_commands text[] NOT NULL DEFAULT '{}';
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS volume smallint NOT NULL DEFAULT 10;
 ALTER TABLE live_watches ADD COLUMN IF NOT EXISTS enabled boolean NOT NULL DEFAULT true;
+
+DO $$ BEGIN
+  ALTER TABLE guilds ADD CONSTRAINT guilds_volume_check CHECK (volume BETWEEN 0 AND 200 AND volume % 10 = 0);
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 `
 
 export async function migrate(): Promise<void> {

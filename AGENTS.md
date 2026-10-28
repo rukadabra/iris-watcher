@@ -48,7 +48,7 @@ Perilaku `play`:
 - `play new ...` mengganti antrean yang sedang berjalan. `play baru` tetap dikenali.
 - `play` saat lagu sedang berjalan menambahkan lagu ke antrean. `play new` mengganti antrean.
 - `pause` pauses, `resume` continues, `next` (or `skip`) plays the next song, `stop` clears the queue.
-- Tombol 🔉 dan 🔊 pada kartu pemutaran mengubah keras suara lagu yang sedang berjalan, langkah 10%, dari 0% sampai 200%. Nilai 100% adalah keras aslinya. Pengaturan ini mengikuti sesi voice itu dan kembali ke 100% setelah Iris keluar.
+- Tombol 🔉 dan 🔊 pada kartu pemutaran mengubah keras suara lagu yang sedang berjalan, langkah 10%, dari 0% sampai 200%. Nilai 100% adalah keras aslinya. Angka ini milik satu server Discord dan tetap tersimpan setelah Iris keluar. Server yang belum diatur memakai 10%.
 - Saat lagu berganti sendiri, Iris mengirim kartu pemutaran baru di channel yang sama.
 - `loop one` mengulang lagu yang sedang diputar. `loop all` mengulang antrean dari awal. `loop off` mematikannya. `satu`, `semua`, dan `mati` tetap dikenali. `next` tetap pindah lagu.
 - `queue` menampilkan 8 lagu per halaman. `queue next` atau tombol halaman membuka halaman selanjutnya. `queue berikutnya` tetap dikenali.

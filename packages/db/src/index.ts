@@ -1,5 +1,5 @@
 export { closeDb, getDb, getSql } from "./client"
-export { getGuild, listGuildPrefixes, listGuildsByIds, setDisabledCommands, setGuildPrefix, upsertGuild } from "./guilds"
+export { getGuild, getGuildVolume, listGuildPrefixes, listGuildsByIds, setDisabledCommands, setGuildPrefix, setGuildVolume, upsertGuild } from "./guilds"
 export {
   listGuildLiveWatches,
   listLiveWatches,

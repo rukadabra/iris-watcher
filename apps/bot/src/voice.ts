@@ -10,6 +10,7 @@ import {
   type AudioResource,
   type VoiceConnection,
 } from "@discordjs/voice"
+import { getGuildVolume, setGuildVolume } from "@iris/db"
 import type { YoutubeItem } from "@iris/shared"
 import { ChannelType, PermissionFlagsBits, type Message, type VoiceChannel } from "discord.js"
 import { openRemoteAudio, resolveRemoteTracks, type RemoteTrack } from "./player-client"
@@ -22,6 +23,7 @@ const ALONE_MS = 60_000
 const VOLUME_MIN = 0
 const VOLUME_MAX = 200
 const VOLUME_STEP = 10
+const VOLUME_DEFAULT = 10
 
 type LoopMode = "off" | "one" | "all"
 
@@ -59,6 +61,7 @@ type Session = {
   openedQuietly: string | null
   heardAt: number
   volume: number
+  volumeLoaded: Promise<void>
   resource: AudioResource | null
 }
 
@@ -146,6 +149,7 @@ async function startCurrent(session: Session, track: Track): Promise<void> {
   const abort = new AbortController()
   session.abort = abort
   const stream = await openRemoteAudio(session.config, track.videoId, abort.signal)
+  await session.volumeLoaded
   if (abort.signal.aborted || session.stopped) {
     stream.destroy()
     return
@@ -372,10 +376,18 @@ function ensureSession(channel: VoiceChannel): Session {
     skipRequested: false,
     openedQuietly: null,
     heardAt: 0,
-    volume: 100,
+    volume: VOLUME_DEFAULT,
+    volumeLoaded: Promise.resolve(),
     resource: null,
   }
   sessions.set(channel.guild.id, session)
+  session.volumeLoaded = getGuildVolume(channel.guild.id)
+    .then((volume) => {
+      if (sessions.get(channel.guild.id) === session) session.volume = volume
+    })
+    .catch((error: unknown) => {
+      console.error(`Could not read the volume for ${channel.guild.id}`, error)
+    })
 
   player.on("error", (error) => {
     console.error(`Could not play in ${channel.guild.id}`, error)
@@ -538,12 +550,18 @@ export function setLoop(guildId: string, mode: LoopMode): Note {
   return applyLoop(session, mode)
 }
 
-export function adjustVolume(guildId: string, direction: "up" | "down"): Note {
+export async function adjustVolume(guildId: string, direction: "up" | "down"): Promise<Note> {
   const session = sessions.get(guildId)
   if (!session?.current) return warn("Queue is empty", "Nothing is playing.")
+  await session.volumeLoaded
   const delta = direction === "up" ? VOLUME_STEP : -VOLUME_STEP
   session.volume = Math.min(VOLUME_MAX, Math.max(VOLUME_MIN, session.volume + delta))
   session.resource?.volume?.setVolume(session.volume / 100)
+  try {
+    await setGuildVolume(guildId, session.volume)
+  } catch (error) {
+    console.error(`Could not save the volume for ${guildId}`, error)
+  }
   return playingNote(session, direction === "up" ? "🔊 Volume" : "🔉 Volume")
 }
 
