@@ -28,6 +28,7 @@ export type PlaybackControls = {
   page: number
   pages: number
   loop: "off" | "one" | "all"
+  volume: number
 }
 
 export type ChannelPick = {
@@ -74,7 +75,14 @@ function button(
   style: Exclude<ButtonStyle, ButtonStyle.Link>,
   disabled = false,
 ): InteractionButtonComponentData {
-  return { type: ComponentType.Button, style, customId, emoji, label, disabled }
+  return {
+    type: ComponentType.Button,
+    style,
+    customId,
+    label,
+    disabled,
+    ...(emoji ? { emoji } : {}),
+  }
 }
 
 function controlRows(controls: PlaybackControls): ComponentInContainerData[] {
@@ -86,6 +94,14 @@ function controlRows(controls: PlaybackControls): ComponentInContainerData[] {
         button("iris:resume", "▶️", "Resume", ButtonStyle.Success, !controls.paused),
         button("iris:next", "⏭️", "Next", ButtonStyle.Primary),
         button("iris:stop", "⏹️", "Stop", ButtonStyle.Danger),
+      ],
+    },
+    {
+      type: ComponentType.ActionRow,
+      components: [
+        button("iris:volume:down", "🔉", "Down", ButtonStyle.Secondary, controls.volume <= 0),
+        button("iris:volume:level", "", `${controls.volume}%`, ButtonStyle.Secondary, true),
+        button("iris:volume:up", "🔊", "Up", ButtonStyle.Secondary, controls.volume >= 200),
       ],
     },
     {
