@@ -191,6 +191,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 
 .stats { grid-template-columns: repeat(3, 1fr); margin: 1rem 0 3rem; }
 .points { grid-template-columns: repeat(2, 1fr); margin-bottom: 4rem; }
+.band .points { grid-template-columns: repeat(3, 1fr); }
 
 .stat, .point, .panel, .command, .guild {
   background: var(--bg-raised);
@@ -210,6 +211,31 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .stat strong.offline { color: var(--muted); }
 
 .point h2 { font-size: 1.55rem; }
+
+.band { margin-bottom: 1rem; }
+.band-copy {
+  max-width: 38rem;
+  margin-bottom: 1.15rem;
+  display: grid;
+  gap: 0.7rem;
+}
+.band-copy h2 { margin: 0; }
+.band-copy p:last-child { color: var(--muted); }
+.tool-list {
+  list-style: none;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+.tool-list li { display: grid; gap: 0.08rem; }
+.tool-list strong {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.tool-list span { color: var(--muted); }
 
 .page { padding: 2rem 0 4rem; }
 .page-intro { max-width: 40rem; margin-bottom: 1.5rem; }
@@ -469,8 +495,12 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   outline-offset: 3px;
 }
 
+@media (max-width: 1100px) {
+  .band .points { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 800px) {
-  .stats, .points { grid-template-columns: 1fr; }
+  .stats, .points, .band .points { grid-template-columns: 1fr; }
   .hero { grid-template-columns: 1fr; padding-top: 1.5rem; }
   .hero-portrait { max-width: 20rem; }
   .site-header { align-items: flex-start; }

@@ -11,7 +11,7 @@ const sans = Outfit({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
   title: { default: "Iris", template: "%s · Iris" },
-  description: "Iris is a Discord bot named after her character. The default prefix is !iris, and each server can change it.",
+  description: "Iris is a Discord bot for music and YouTube live alerts. The default prefix is !iris, and each server can change it.",
 }
 
 export const dynamic = "force-dynamic"

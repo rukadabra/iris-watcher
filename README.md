@@ -2,7 +2,26 @@
 
 Discord bot for many servers, plus a web dashboard. Commands are prefix-only. The default prefix is `!iris`. Iris does not register slash commands.
 
-A server manager can change that server's prefix, YouTube live alerts, and which commands are on. `help` and `prefix` stay available.
+A server manager can change that server's prefix, YouTube live alerts, and which commands are on. `help` and `prefix` stay available. Music plays in a voice channel. The playback card can pause, skip, loop, and change volume. Volume belongs to that server: steps of 10%, from 0% to 200%, starting at 10% until someone changes it. 100% is the song's own loudness.
+
+## Tools
+
+| Tool | Role |
+| --- | --- |
+| discord.js 14.27 | Gateway, messages, and buttons |
+| @discordjs/voice 0.19 | Voice connection. Opus uses opusscript. DAVE uses @snazzah/davey, which ships with the voice package |
+| yt-dlp | Reads a YouTube video, playlist, or channel |
+| ffmpeg | Prepares PCM audio on the player |
+| Next.js 16.4 | The website and dashboard |
+| React 19 | The pages |
+| PostgreSQL 17 | Prefix, alerts, disabled commands, and volume |
+| Redis 7 | Prefix cache, dashboard sessions, and online status |
+| Drizzle 0.45 | Database access from the bot and the site |
+| Node.js 24.17 or newer | Runtime |
+| TypeScript 5.9 | The codebase |
+| pnpm 10.33.3 | Package manager |
+| Docker | Postgres, Redis, and the images used in deploy |
+| Dokploy | Runs the compose file and attaches the site domain |
 
 ## Requirements
 
@@ -60,6 +79,10 @@ Examples use the default prefix. A server with a custom prefix uses that prefix 
 | `!iris live <link or @handle>` | Adds a YouTube channel for this server |
 | `!iris live list` | Shows this server's channels |
 | `!iris live remove <channel>` | Removes one channel from this server |
+
+`play baru`, `queue berikutnya`, and `loop satu`, `loop semua`, and `loop mati` are accepted too.
+
+The playback card also has buttons for pause, resume, next, stop, queue pages, loop, and volume. Volume moves by 10%. Each server keeps its own level.
 
 The person who starts music must already be in a normal voice channel. Iris needs Connect and Speak there. If nobody else stays in that channel for one minute, Iris leaves. Other bots are not counted.
 
