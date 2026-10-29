@@ -35,6 +35,7 @@ export {
 } from "./channel"
 export { classifyPlayArgs, parseYoutubeTarget, type PlayRequest, type YoutubeItem } from "./youtube"
 export {
+  currencyFlag,
   decodeHtml,
   describeWeather,
   lyricQuery,
@@ -45,15 +46,18 @@ export {
   pickPlace,
   pickRate,
   pickRssHeadlines,
+  pickOgImage,
   pickStories,
   pickTrivia,
   pickWiki,
   pickWikiTitle,
   readable,
   stripTags,
+  weatherIcon,
   weatherLabel,
   type AnimeHit,
   type DefinitionHit,
+  type DefinitionSense,
   type LyricsHit,
   type PlaceHit,
   type RateArgs,

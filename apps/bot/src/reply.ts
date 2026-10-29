@@ -21,6 +21,7 @@ const rose = 0xe0a096
 export type Line = {
   name: string
   value: string
+  image?: string
 }
 
 export type PlaybackControls = {
@@ -37,11 +38,21 @@ export type ChannelPick = {
   channelId?: string
 }
 
+export type NoteLink = {
+  label: string
+  url: string
+}
+
 export type Note = {
   kicker?: string
   title: string
   description?: string
   fields?: Line[]
+  footer?: string
+  image?: string
+  thumbnail?: string
+  accent?: number
+  links?: NoteLink[]
   tone?: "warn"
   controls?: PlaybackControls
   channelPick?: ChannelPick
@@ -125,7 +136,8 @@ function controlRows(controls: PlaybackControls): ComponentInContainerData[] {
 function card(client: Client, item: Note): ComponentInContainerData[] {
   const mark = item.kicker ? `-# Iris  ·  ${item.kicker}` : "-# Iris"
   const heading = item.tone === "warn" ? `## ⚠️ ${item.title}` : `## ${item.title}`
-  const avatar = client.user?.displayAvatarURL({ extension: "png", size: 128 })
+  const custom = item.thumbnail && /^https?:\/\//i.test(item.thumbnail) ? item.thumbnail.slice(0, 2048) : ""
+  const avatar = custom || client.user?.displayAvatarURL({ extension: "png", size: 128 })
   const blocks: ComponentInContainerData[] = [
     avatar
       ? {
@@ -137,21 +149,86 @@ function card(client: Client, item: Note): ComponentInContainerData[] {
           accessory: {
             type: ComponentType.Thumbnail,
             media: { url: avatar },
-            description: "Iris",
+            description: custom ? item.title.slice(0, 1024) : "Iris",
           },
         }
       : { type: ComponentType.TextDisplay, content: `${mark}\n${heading}` },
   ]
-  const text = body(item)
-  if (text) {
+  if (item.image && /^https?:\/\//i.test(item.image)) {
     blocks.push(
       { type: ComponentType.Separator, divider: true, spacing: SeparatorSpacingSize.Small },
-      { type: ComponentType.TextDisplay, content: text },
+      {
+        type: ComponentType.MediaGallery,
+        items: [{ media: { url: item.image.slice(0, 2048) }, description: item.title.slice(0, 1024) }],
+      },
     )
   }
+  const pictured = item.fields?.some((field) => field.image && /^https?:\/\//i.test(field.image))
+  if (pictured && item.fields?.length) {
+    blocks.push({ type: ComponentType.Separator, divider: true, spacing: SeparatorSpacingSize.Small })
+    if (item.description) {
+      blocks.push({ type: ComponentType.TextDisplay, content: item.description.slice(0, 3900) })
+    }
+    for (const field of item.fields) {
+      blocks.push(fieldBlock(field))
+    }
+  } else {
+    const text = body(item)
+    if (text) {
+      blocks.push(
+        { type: ComponentType.Separator, divider: true, spacing: SeparatorSpacingSize.Small },
+        { type: ComponentType.TextDisplay, content: text },
+      )
+    }
+  }
+  if (item.footer) {
+    blocks.push({ type: ComponentType.TextDisplay, content: `-# ${item.footer}` })
+  }
+  if (item.links?.length) blocks.push(...linkRows(item.links))
   if (item.controls) blocks.push(...controlRows(item.controls))
   if (item.channelPick) blocks.push(channelMenu(item.channelPick))
   return blocks
+}
+
+function fieldBlock(field: Line): ComponentInContainerData {
+  const [first, ...rest] = field.value.split("\n")
+  const lines = [
+    `**${field.name}**`,
+    first ? `-# ${first}` : "",
+    ...rest,
+  ].filter(Boolean)
+  const content = lines.join("\n").slice(0, 3900)
+  const image = field.image?.trim() ?? ""
+  if (/^https?:\/\//i.test(image)) {
+    return {
+      type: ComponentType.Section,
+      components: [{ type: ComponentType.TextDisplay, content }],
+      accessory: {
+        type: ComponentType.Thumbnail,
+        media: { url: image.slice(0, 2048) },
+        description: field.name.slice(0, 1024),
+      },
+    }
+  }
+  return { type: ComponentType.TextDisplay, content }
+}
+
+function linkRows(links: NoteLink[]): ComponentInContainerData[] {
+  const rows: ComponentInContainerData[] = []
+  for (let index = 0; index < links.length; index += 5) {
+    const slice = links.slice(index, index + 5).filter((link) => /^https?:\/\//i.test(link.url) && link.url.length <= 512)
+    if (slice.length === 0) continue
+    rows.push({
+      type: ComponentType.ActionRow,
+      components: slice.map((link) => ({
+        type: ComponentType.Button,
+        style: ButtonStyle.Link,
+        label: (link.label.trim() || "Open").slice(0, 80),
+        url: link.url,
+      })),
+    })
+  }
+  return rows
 }
 
 function channelMenu(pick: ChannelPick): ActionRowData<ChannelSelectMenuComponentData> {
@@ -172,7 +249,7 @@ function channelMenu(pick: ChannelPick): ActionRowData<ChannelSelectMenuComponen
 function container(client: Client, item: Note): ContainerComponentData {
   return {
     type: ComponentType.Container,
-    accentColor: item.tone === "warn" ? rose : copper,
+    accentColor: item.tone === "warn" ? rose : (item.accent ?? copper),
     components: card(client, item),
   }
 }

@@ -1,4 +1,4 @@
-import { classifyPlayArgs, commandGroups, commandList } from "@iris/shared"
+import { classifyPlayArgs, commandGroups, commandList, inviteUrl } from "@iris/shared"
 import type { Message } from "discord.js"
 import type { BotEnv } from "./env"
 import { animeLookup, defineLookup, hnLookup, lyricsLookup, newsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
@@ -12,6 +12,7 @@ import {
   leaveVoice,
   loopStatus,
   pausePlayback,
+  playingArtwork,
   playingTitle,
   playYoutube,
   resumePlayback,
@@ -19,6 +20,8 @@ import {
   skipTrack,
   stopPlayback,
 } from "./voice"
+
+const IRIS_GOLD = 0xd7a15f
 
 export type CommandContext = {
   message: Message
@@ -60,20 +63,48 @@ export const commands: Record<string, BotCommand> = {
     },
   },
   about: {
-    async execute({ message }) {
-      await reply(
-        message,
-        note(
-          "🌿 About",
-          [
-            "Made by **Gede Krisna**.",
-            "**Discord** [atsuki](https://discord.com/users/193344047895674880)",
-            "**GitHub** https://github.com/rukadabra",
-            "Iris plays YouTube in a voice channel for every server she joins. A title, a link, or a playlist becomes the queue, and each server keeps its own prefix.",
-            "-# She was made so people in a server can listen together with a short prefix command.",
-          ].join("\n"),
-        ),
-      )
+    async execute({ message, prefix, env }) {
+      const { client } = message
+      const stats = [
+        `🏠 **${client.guilds.cache.size}** ${client.guilds.cache.size === 1 ? "server" : "servers"}`,
+        `⏱️ up **${uptime(client.uptime ?? 0)}**`,
+        `📡 **${Math.max(0, Math.round(client.ws.ping))} ms**`,
+      ].join("  ·  ")
+      await reply(message, {
+        kicker: "🌿 About",
+        title: "Hi, I'm Iris",
+        description: [
+          "I keep your server company. I play music in voice, tell you when a channel goes live, and answer quick questions without anyone leaving Discord.",
+          stats,
+        ].join("\n\n"),
+        fields: [
+          {
+            name: "🎵 Listen together",
+            value: "Play a title, a link, or a whole playlist. When the queue runs low, I keep it going with songs that fit.",
+          },
+          {
+            name: "🔴 Never miss a stream",
+            value: "Follow up to 50 YouTube channels, and I post a card the moment one of them goes live.",
+          },
+          {
+            name: "🔎 Ask me anything quick",
+            value: "Lyrics, weather, Wikipedia, word meanings, exchange rates, anime, trivia, news, and Hacker News.",
+          },
+          {
+            name: "⚙️ Your server, your way",
+            value: "Each server picks its own prefix, alert list, and commands from the dashboard.",
+          },
+        ],
+        thumbnail: client.user?.displayAvatarURL({ extension: "png", size: 256 }),
+        accent: IRIS_GOLD,
+        footer: `Start with ${safe(prefix)} help  ·  Made with care by Gede Krisna ([atsuki](https://discord.com/users/193344047895674880))`,
+        links: [
+          ...(client.user ? [{ label: "Invite Iris", url: inviteUrl(client.user.id) }] : []),
+          { label: "Website", url: env.WEB_ORIGIN },
+          { label: "Dashboard", url: `${env.WEB_ORIGIN}/dashboard` },
+          { label: "GitHub", url: "https://github.com/rukadabra" },
+        ],
+      })
     },
   },
   ping: {
@@ -200,8 +231,10 @@ export const commands: Record<string, BotCommand> = {
   lyrics: {
     async execute({ message, args }) {
       const typed = args.join(" ").trim()
-      const query = typed || playingTitle(message.guild?.id ?? "") || ""
-      await reply(message, await lyricsLookup(query, !typed && Boolean(query)))
+      const guildId = message.guild?.id ?? ""
+      const query = typed || playingTitle(guildId) || ""
+      const fromQueue = !typed && Boolean(query)
+      await reply(message, await lyricsLookup(query, fromQueue, fromQueue ? playingArtwork(guildId) : null))
     },
   },
   weather: {
@@ -244,4 +277,13 @@ export const commands: Record<string, BotCommand> = {
       await reply(message, await hnLookup(args.join(" ")))
     },
   },
+}
+
+function uptime(ms: number): string {
+  const minutes = Math.floor(ms / 60_000)
+  const days = Math.floor(minutes / 1440)
+  const hours = Math.floor((minutes % 1440) / 60)
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes % 60}m`
+  return `${Math.max(1, minutes)}m`
 }
