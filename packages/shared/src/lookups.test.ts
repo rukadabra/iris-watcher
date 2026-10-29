@@ -9,6 +9,8 @@ import {
   pickLyrics,
   pickPlace,
   pickRate,
+  pickRssHeadlines,
+  pickStories,
   pickTrivia,
   pickWiki,
   pickWikiTitle,
@@ -116,6 +118,18 @@ describe("lookups", () => {
     assert.equal(hit.question, 'Say "hi"')
     assert.deepEqual(hit.choices, ["Yes", "No", "Maybe"])
     assert.equal(pickTrivia({ response_code: 5 })?.kind, "limit")
+  })
+
+  it("reads a short list of headlines and stories", () => {
+    const headlines = pickRssHeadlines(
+      "<item><title><![CDATA[Rain in Bali &amp; Java - BBC]]></title><link>https://news.example/bali</link><source>BBC</source></item>",
+    )
+    assert.equal(headlines[0]?.title, "Rain in Bali & Java")
+    assert.equal(headlines[0]?.source, "BBC")
+    const stories = pickStories({
+      hits: [{ title: "Iris", url: "", objectID: "42", points: 12 }, { title: "", url: "https://example.test" }],
+    })
+    assert.deepEqual(stories, [{ title: "Iris", url: "https://news.ycombinator.com/item?id=42", source: "12 points" }])
   })
 
   it("keeps lyrics readable without a mention", () => {

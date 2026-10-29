@@ -1,7 +1,7 @@
 import { classifyPlayArgs, commandGroups, commandList } from "@iris/shared"
 import type { Message } from "discord.js"
 import type { BotEnv } from "./env"
-import { animeLookup, defineLookup, lyricsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
+import { animeLookup, defineLookup, hnLookup, lyricsLookup, newsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
 import { searchRemoteTrack } from "./player-client"
 import { runLiveCommand } from "./live"
 import { editReply, note, reply, safe, scene, warn } from "./reply"
@@ -232,6 +232,16 @@ export const commands: Record<string, BotCommand> = {
   trivia: {
     async execute({ message }) {
       await reply(message, await triviaLookup())
+    },
+  },
+  news: {
+    async execute({ message, args }) {
+      await reply(message, await newsLookup(args.join(" ")))
+    },
+  },
+  hn: {
+    async execute({ message, args }) {
+      await reply(message, await hnLookup(args.join(" ")))
     },
   },
 }

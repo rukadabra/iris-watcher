@@ -92,8 +92,10 @@ Lookups:
 - `!iris rate [amount] <from> <to>`
 - `!iris anime <title>`
 - `!iris trivia`
+- `!iris news <topic>`
+- `!iris hn [query]`
 
-`lyrics` with no title uses the song playing in that server. The other lookup commands do not use voice. The sources are LRCLIB, Open-Meteo, Wikipedia, Free Dictionary, Frankfurter, AniList, and Open Trivia DB. No token.
+`lyrics` with no title uses the song playing in that server. `hn` with no query shows the front page. The other lookup commands do not use voice. The sources are LRCLIB, Open-Meteo, Wikipedia, Free Dictionary, Frankfurter, AniList, Open Trivia DB, Google News, and Hacker News. No token.
 
 The person who sends a music command must already be in a normal voice channel. The bot needs Connect and Speak in that channel. If nobody else is in that channel for one minute, Iris leaves on her own. Other bots are not counted.
 

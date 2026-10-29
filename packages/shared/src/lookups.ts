@@ -304,6 +304,57 @@ export function pickTrivia(payload: unknown, random: () => number = Math.random)
   }
 }
 
+export type StoryHit = {
+  title: string
+  url: string
+  source: string
+}
+
+export function pickRssHeadlines(xml: string, limit = 5): StoryHit[] {
+  const stories: StoryHit[] = []
+  for (const item of xml.split(/<item\b/i).slice(1)) {
+    const source = cleanRss(innerTag(item, "source"))
+    const title = stripSource(cleanRss(innerTag(item, "title")), source)
+    const url = cleanRss(innerTag(item, "link"))
+    if (!title || !/^https?:\/\//i.test(url)) continue
+    stories.push({ title, url, source })
+    if (stories.length === limit) break
+  }
+  return stories
+}
+
+export function pickStories(payload: unknown, limit = 5): StoryHit[] {
+  const hits = record(payload)?.hits
+  if (!Array.isArray(hits)) return []
+  const stories: StoryHit[] = []
+  for (const hit of hits) {
+    const row = record(hit)
+    if (!row) continue
+    const title = text(row.title)
+    const id = text(row.objectID)
+    const url = text(row.url) || (id ? `https://news.ycombinator.com/item?id=${id}` : "")
+    if (!title || !/^https?:\/\//i.test(url)) continue
+    const points = typeof row.points === "number" ? `${row.points} points` : ""
+    stories.push({ title, url, source: points })
+    if (stories.length === limit) break
+  }
+  return stories
+}
+
+function innerTag(item: string, name: string): string {
+  const match = item.match(new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)</${name}>`, "i"))
+  return match?.[1] ?? ""
+}
+
+function cleanRss(value: string): string {
+  return decodeHtml(value.replace(/<!\[CDATA\[|\]\]>/g, "")).replace(/\s+/g, " ").trim()
+}
+
+function stripSource(title: string, source: string): string {
+  const suffix = source ? ` - ${source}` : ""
+  return suffix && title.endsWith(suffix) ? title.slice(0, -suffix.length).trim() : title
+}
+
 function shuffle(values: string[], random: () => number): string[] {
   const copy = [...values]
   for (let index = copy.length - 1; index > 0; index -= 1) {
