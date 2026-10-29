@@ -45,6 +45,18 @@ const tools = [
     ],
   },
   {
+    title: "Lookups",
+    items: [
+      ["LRCLIB", "Lyrics for a song"],
+      ["Open-Meteo", "Weather by city"],
+      ["Wikipedia", "A short page summary"],
+      ["Free Dictionary", "An English definition"],
+      ["Frankfurter", "A daily exchange rate"],
+      ["AniList", "Anime by title"],
+      ["Open Trivia DB", "One trivia question"],
+    ],
+  },
+  {
     title: "Deploy",
     items: [
       ["Docker", "Postgres, Redis, and the images"],
@@ -145,6 +157,13 @@ export default async function HomePage() {
           <p>
             A manager can watch up to 50 YouTube channels and pick the text channel that receives the
             card. The list belongs to that server.
+          </p>
+        </article>
+        <article className="point">
+          <h2>Lookups</h2>
+          <p>
+            Lyrics, weather, a Wikipedia summary, an English definition, a daily exchange rate, an
+            anime title, and one trivia question. These calls need no token.
           </p>
         </article>
       </section>

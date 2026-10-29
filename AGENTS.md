@@ -1,60 +1,60 @@
 # Iris
 
-Bot Discord multi-server plus situs Next.js. Nama bot diambil dari karakternya. Perintah hanya prefix, bawaan `!iris`. Tidak ada slash command.
+A multi-server Discord bot plus a Next.js site. The bot's name comes from the character. Commands are prefix-only, and the default is `!iris`. There are no slash commands.
 
-Dokumen ini untuk agent Cursor yang membuka repo yang sama di mesin lain. Jangan menaruh token, client secret, atau isi `.env` ke dalam file, commit, atau balasan.
+This document is for a Cursor agent opening the same repo on another machine. Do not put a token, client secret, or the contents of `.env` into a file, a commit, or a reply.
 
-## Yang tidak boleh diubah
+## Leave these alone
 
-- Satu proses Gateway saja. Dua proses dengan `DISCORD_TOKEN` yang sama saling memutus sesi. Jangan menjalankan bot lokal bersamaan dengan replika bot di VPS.
-- Jangan menambah slash command. Jangan menyalakan intent `GuildMembers` atau `GuildPresences`. Presence yang tampil di profil Iris adalah aktivitas bot sendiri: Listening to judul yang sedang diputar, atau YouTube saat tidak ada lagu. Saat jeda, statusnya idle.
-- Prefix milik satu server, bukan satu channel. Nilai kosong di database berarti prefix bawaan. Penulis prefix adalah web. Bot hanya menampilkan prefix.
-- Setelah prefix yang berakhir huruf atau angka, perintah wajib dipisah spasi: `!iris help` jalan, `!irishelp` tidak. Prefix yang berakhir simbol boleh menempel (`!help`) atau berjarak (`! help`).
-- Gambar situs memakai `next/image` dan path string dari `public/`.
+- One Gateway process only. Two processes with the same `DISCORD_TOKEN` disconnect each other. Do not run the bot locally at the same time as the bot replica on the VPS.
+- Do not add slash commands. Do not enable the `GuildMembers` or `GuildPresences` intents. The presence on Iris's profile is the bot's own activity: Listening to the title that is playing, or YouTube when nothing is playing. While paused, the status is idle.
+- The prefix belongs to one server, not one channel. An empty value in the database means the default prefix. The web writes the prefix. The bot only displays it.
+- After a prefix that ends in a letter or number, the command must be separated by a space: `!iris help` runs, `!irishelp` does not. A prefix that ends in a symbol may be attached (`!help`) or spaced (`! help`).
+- Site images use `next/image` and string paths from `public/`.
 
-## Susunan repo
+## Repo layout
 
-- `apps/bot` — discord.js 14.27.0, satu koneksi Gateway, voice, health di dalam proses.
-- `apps/web` — Next.js 16, landing dan dashboard. Dashboard mengubah prefix, daftar pantauan siaran, dan perintah yang menyala di server itu. `output: "standalone"`.
-- `apps/player` — membaca YouTube dengan `yt-dlp` dan mengalirkan PCM lewat ffmpeg. Tidak memegang token Discord.
-- `packages/shared` — prefix, daftar perintah, URL undang bot, parser tautan YouTube.
-- `packages/db` — Postgres, tabel `guilds`.
-- Redis — cache prefix, sesi dashboard, heartbeat status.
+- `apps/bot` — discord.js 14.27.0, one Gateway connection, voice, and health inside the process.
+- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the live-alert list, and which commands are on for that server. `output: "standalone"`.
+- `apps/player` — reads YouTube with `yt-dlp` and streams PCM through ffmpeg. It does not hold a Discord token.
+- `packages/shared` — prefix, command list, bot invite URL, and the YouTube link parser.
+- `packages/db` — Postgres, table `guilds`.
+- Redis — prefix cache, dashboard sessions, and the status heartbeat.
 
-Node.js minimal 24.17, karena `@discordjs/voice` 0.19.2 mensyaratkan itu. Package manager: pnpm 10.33.3.
+Node.js 24.17 or newer, because `@discordjs/voice` 0.19.2 requires it. Package manager: pnpm 10.33.3.
 
-## Voice dan YouTube
+## Voice and YouTube
 
-`@discordjs/voice` 0.19.2. Enkripsi `aes-256-gcm` sudah ada di Node, jadi library sodium tidak dipasang. DAVE memakai `@snazzah/davey` yang ikut bersama paket voice. Opus memakai `opusscript`. ffmpeg wajib ada di mesin player untuk YouTube. Player mengirim PCM 16-bit stereo 48 kHz. Bot mengubahnya menjadi Opus dan mengatur keras suara di situ, jadi mesin bot tidak membutuhkan ffmpeg.
+`@discordjs/voice` 0.19.2. `aes-256-gcm` is already in Node, so a sodium library is not installed. DAVE uses `@snazzah/davey`, which ships with the voice package. Opus uses `opusscript`. ffmpeg must be on the machine that runs the player for YouTube. The player sends 16-bit stereo PCM at 48 kHz. The bot turns that into Opus and applies loudness there, so the bot machine does not need ffmpeg.
 
-Dokumen paket: https://discord.js.org/docs/packages/voice/0.19.2
+Package docs: https://discord.js.org/docs/packages/voice/0.19.2
 
-Alurnya:
+The flow:
 
-1. Pengguna mengirim perintah di Discord.
-2. Bot meminta metadata ke `PLAYER_URL` dengan `Authorization: Bearer PLAYER_TOKEN`.
-3. Player membaca YouTube lalu mengirim audio PCM.
-4. Bot memutar aliran itu di voice channel.
+1. A person sends a command in Discord.
+2. The bot asks `PLAYER_URL` for metadata with `Authorization: Bearer PLAYER_TOKEN`.
+3. The player reads YouTube and sends PCM audio.
+4. The bot plays that stream in the voice channel.
 
-Player hanya menerima id video dan id playlist yang sudah divalidasi, plus judul pencarian pada `POST /search`. Pencarian selalu memakai `ytsearch1:` di yt-dlp. Jangan mengubahnya menjadi pengunduh URL bebas.
+The player accepts only video ids and playlist ids that have already been validated, plus a search title on `POST /search`. Search always uses `ytsearch1:` in yt-dlp. Do not turn that into a downloader for arbitrary URLs.
 
-Untuk kabar siaran, player juga menerima target channel yang sudah divalidasi pada `POST /channel` (`id` `UC…`, `handle`, atau `custom` `c`/`user`) dan paling banyak 50 id channel pada `POST /live`. Player membuka halaman channel dan halaman `/live`, satu per satu. Itu bukan pengunduh URL bebas: URL YouTube disusun dari target yang lolos validasi. ffmpeg tidak dipakai untuk pemeriksaan ini.
+For live alerts, the player also accepts a validated channel target on `POST /channel` (`id` `UC…`, `handle`, or `custom` `c`/`user`) and at most 50 channel ids on `POST /live`. The player opens the channel page and the `/live` page, one at a time. That is not an arbitrary-URL downloader: the YouTube URL is built from a target that passed validation. ffmpeg is not used for this check.
 
-Perilaku `play`:
+`play` behavior:
 
-- Satu judul, misalnya `play despacito`: cari hasil teratas di YouTube, putar video itu, lalu antre lanjutan (paling banyak 20 sekali ambil, isi ulang sampai 40).
-- Beberapa tautan dalam satu pesan: antre tautan itu saja.
-- Tautan `youtube.com/playlist?list=`: antre isi playlist, paling banyak 40.
-- `play new ...` mengganti antrean yang sedang berjalan. `play baru` tetap dikenali.
-- `play` saat lagu sedang berjalan menambahkan lagu ke antrean. `play new` mengganti antrean.
+- One title, for example `play despacito`: search for the top YouTube result, play that video, then queue what follows (at most 20 per fetch, refilled until 40).
+- Several links in one message: queue only those links.
+- A `youtube.com/playlist?list=` link: queue the playlist, at most 40.
+- `play new ...` replaces the queue that is running.
+- `play` while a song is playing adds the song to the queue. `play new` replaces the queue.
 - `pause` pauses, `resume` continues, `next` (or `skip`) plays the next song, `stop` clears the queue.
-- Tombol 🔉 dan 🔊 pada kartu pemutaran mengubah keras suara lagu yang sedang berjalan, langkah 10%, dari 0% sampai 200%. Nilai 100% adalah keras aslinya. Angka ini milik satu server Discord dan tetap tersimpan setelah Iris keluar. Server yang belum diatur memakai 10%.
-- Saat lagu berganti sendiri, Iris mengirim kartu pemutaran baru di channel yang sama.
-- `loop one` mengulang lagu yang sedang diputar. `loop all` mengulang antrean dari awal. `loop off` mematikannya. `satu`, `semua`, dan `mati` tetap dikenali. `next` tetap pindah lagu.
-- `queue` menampilkan 8 lagu per halaman. `queue next` atau tombol halaman membuka halaman selanjutnya. `queue berikutnya` tetap dikenali.
-- Tautan video yang juga membawa `list=PL...` diperlakukan sebagai satu video. Mix `list=RD...` diabaikan karena lanjutan diambil sendiri.
+- The 🔉 and 🔊 buttons on the playback card change the loudness of the song that is playing, in steps of 10%, from 0% to 200%. 100% is the song's own loudness. The number belongs to one Discord server and stays after Iris leaves. A server that has not been set uses 10%.
+- When a song changes on its own, Iris sends a new playback card in the same channel.
+- `loop one` repeats the song that is playing. `loop all` repeats the queue from the start. `loop off` turns that off. `next` still moves to the next song.
+- `queue` shows 8 songs per page. `queue next` or the page buttons open the next page.
+- A video link that also carries `list=PL...` is treated as one video. A mix `list=RD...` is ignored because the follow-on queue is fetched separately.
 
-Perintah, dengan prefix bawaan. Daftar di situs, dashboard, dan `help` memakai tiga kelompok: General, Music, Live alerts.
+Commands, with the default prefix. The site, the dashboard, and `help` use four groups: General, Music, Live alerts, Lookups.
 
 General:
 
@@ -83,37 +83,49 @@ Live alerts:
 - `!iris live list`
 - `!iris live remove <channel>`
 
-Pengirim perintah musik harus sudah berada di voice channel biasa. Izin bot di channel itu: Connect dan Speak. Jika tidak ada orang lain di channel itu selama satu menit, Iris keluar sendiri. Bot lain tidak dihitung.
+Lookups:
 
-`live` tidak memakai voice. Daftar dan channel tujuan milik satu server Discord, tidak dicampur dengan server lain. Yang boleh mengubah: pemilik server, Manage Server, atau Administrator. `!iris live` tanpa tautan membuka dropdown channel teks. Kabar tidak dikirim sebelum channel itu dipilih. `channel` dan `saluran` membuka dropdown yang sama. `list` dan `daftar` menampilkan daftar server itu. `remove`, `hapus`, dan `off` melepas satu channel YouTube dari server itu saja. Satu server paling banyak 50 channel. Channel YouTube yang sama di beberapa server hanya diperiksa sekali, lalu kartunya dikirim ke channel tujuan masing-masing server.
+- `!iris lyrics [title]`
+- `!iris weather <city>`
+- `!iris wiki <topic>`
+- `!iris define <word>`
+- `!iris rate [amount] <from> <to>`
+- `!iris anime <title>`
+- `!iris trivia`
 
-Bot menanyakan player setiap 2 menit. Kalau putaran sebelumnya masih berjalan, putaran baru menunggu. Halaman `/live` yang kanoniknya video dan `videoDetails.isLive` true mengirim satu kartu, lalu tautan videonya. Kartu memakai Components V2, jadi preview video datang dari pesan tautan di bawahnya, yang Discord ubah menjadi embed. Id video yang sama tidak dikirim ulang. Kegagalan membaca satu channel tidak menghapus penanda siaran yang sedang berjalan. Saat halaman `/live` tidak lagi live, penanda itu dikosongkan supaya siaran berikutnya memberitahu lagi.
+`lyrics` with no title uses the song playing in that server. The other lookup commands do not use voice. The sources are LRCLIB, Open-Meteo, Wikipedia, Free Dictionary, Frankfurter, AniList, and Open Trivia DB. No token.
 
-## Izin Discord
+The person who sends a music command must already be in a normal voice channel. The bot needs Connect and Speak in that channel. If nobody else is in that channel for one minute, Iris leaves on her own. Other bots are not counted.
 
-Intent: `Guilds`, `GuildMessages`, `MessageContent`, `GuildVoiceStates`. Hanya Message Content yang privileged, dan itu harus menyala di Developer Portal.
+`live` does not use voice. The list and the destination channel belong to one Discord server, and are not mixed with another server. Who may change them: the server owner, Manage Server, or Administrator. `!iris live` with no link opens a text-channel dropdown. No alert is sent before that channel is chosen. `channel` opens the same dropdown. `list` shows that server's list. `remove` and `off` detach one YouTube channel from that server only. One server can have at most 50 channels. The same YouTube channel on several servers is checked once, then its card is sent to each server's destination channel.
 
-Undang bot memakai `scope=bot`. Discord otomatis menyertakan `applications.commands` pada scope itu. Iris tidak mendaftarkan slash command. Izin yang diminta: View Channels, Send Messages, Embed Links, Read Message History, Connect, Speak. Angka gabungannya ada di `BOT_INVITE_PERMISSIONS` pada `packages/shared/src/discord.ts`.
+The bot asks the player every 2 minutes. If the previous round is still running, the new round waits. A `/live` page whose canonical URL is a video and whose `videoDetails.isLive` is true sends one card, then the video link. The card uses Components V2, so the video preview comes from the link message below it, which Discord turns into an embed. The same video id is not sent again. A failure reading one channel does not clear the marker for a stream that is still going. When the `/live` page is no longer live, that marker is cleared so the next stream notifies again.
 
-Tautan undang dibuka di tab baru. Setelah izin diubah, tautan undang harus dibuka ulang lalu di-authorize lagi.
+## Discord permissions
 
-Dashboard OAuth memakai scope `identify guilds`. Redirect: `${WEB_ORIGIN}/api/auth/callback`. Yang boleh mengubah prefix, daftar pantauan, channel tujuan, dan perintah yang menyala: pemilik server, Manage Server, atau Administrator. Menambah channel YouTube dari dashboard memanggil player `POST /channel` dengan target yang sudah divalidasi. `help` dan `prefix` tidak bisa dimatikan. Perintah lain yang dimatikan ditolak bot, termasuk tombol musik yang setara. Pantauan yang dimatikan tidak diperiksa dan tidak dikirimi kartu. Daftar Discord dan dashboard memakai data yang sama.
+Intents: `Guilds`, `GuildMessages`, `MessageContent`, `GuildVoiceStates`. Only Message Content is privileged, and it must be enabled in the Developer Portal.
 
-## Lingkungan
+The invite uses `scope=bot`. Discord automatically includes `applications.commands` on that scope. Iris does not register slash commands. Requested permissions: View Channels, Send Messages, Embed Links, Read Message History, Connect, Speak. The combined integer is `BOT_INVITE_PERMISSIONS` in `packages/shared/src/discord.ts`.
 
-Salin `.env.example` menjadi `.env`. Jangan commit `.env`.
+The invite link opens in a new tab. After permissions change, the invite link must be opened again and authorized again.
 
-Kunci yang dipakai bot dan web: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `WEB_ORIGIN`, `DEFAULT_PREFIX`, `DATABASE_URL`, `REDIS_URL`, `HEALTH_PORT`, `PLAYER_URL`, `PLAYER_TOKEN`.
+Dashboard OAuth uses the scope `identify guilds`. Redirect: `${WEB_ORIGIN}/api/auth/callback`. Who may change the prefix, the watch list, the destination channel, and which commands are on: the server owner, Manage Server, or Administrator. Adding a YouTube channel from the dashboard calls the player `POST /channel` with a target that has already been validated. `help` and `prefix` cannot be turned off. The bot rejects any other command that is off, including the matching music buttons. A watch that is off is not checked and receives no card. Discord and the dashboard use the same data.
 
-Kunci player: `PLAYER_TOKEN` (minimal 16 karakter, sama dengan yang dibaca bot), `PLAYER_HOST`, `PLAYER_PORT`, `YTDLP_PATH`, `FFMPEG_PATH`.
+## Environment
 
-Lokal memakai Postgres dan Redis di `127.0.0.1`. Di dalam kontainer, URL database dan Redis menunjuk hostname service `postgres` dan `redis`. `tsx watch` tidak memuat ulang `.env`. Setelah `.env` berubah, prosesnya harus dinyalakan ulang.
+Copy `.env.example` to `.env`. Do not commit `.env`.
 
-`HEALTH_PORT` lokal bot adalah 8081 karena port 8080 di mesin pengembangan ini dipakai nginx. Di dalam kontainer bot, health tetap 8080 dan tidak dipublikasikan.
+Keys used by the bot and the web: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `WEB_ORIGIN`, `DEFAULT_PREFIX`, `DATABASE_URL`, `REDIS_URL`, `HEALTH_PORT`, `PLAYER_URL`, `PLAYER_TOKEN`.
 
-## Menjalankan lokal
+Player keys: `PLAYER_TOKEN` (at least 16 characters, the same value the bot reads), `PLAYER_HOST`, `PLAYER_PORT`, `YTDLP_PATH`, `FFMPEG_PATH`.
 
-Butuh yt-dlp dan ffmpeg di PATH mesin yang menjalankan player. Di Mac pengembangan, keduanya dari Homebrew. Bot sendiri tidak memutar file lokal.
+Local Postgres and Redis are at `127.0.0.1`. Inside a container, the database and Redis URLs point at the service hostnames `postgres` and `redis`. `tsx watch` does not reload `.env`. After `.env` changes, the process has to be started again.
+
+The bot's local `HEALTH_PORT` is 8081 because port 8080 on this development machine is used by nginx. Inside the bot container, health stays on 8080 and is not published.
+
+## Run locally
+
+yt-dlp and ffmpeg must be on the PATH of the machine that runs the player. On the development Mac, both come from Homebrew. The bot itself does not play local files.
 
 ```bash
 docker compose -f docker-compose.yml -f compose.local.yml up postgres redis -d
@@ -121,21 +133,21 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` menjalankan bot, web, dan player bersamaan.
+`pnpm dev` runs the bot, web, and player together.
 
 - Web: http://localhost:3000
-- Health bot: http://127.0.0.1:8081/health
-- Health player: http://127.0.0.1:8090/health
+- Bot health: http://127.0.0.1:8081/health
+- Player health: http://127.0.0.1:8090/health
 
-Player bind ke `127.0.0.1` supaya tidak terbuka ke jaringan.
+The player binds to `127.0.0.1` so it is not open to the network.
 
 ## Deploy
 
-Dokploy memakai `docker-compose.yml`. Domain dipasang ke service `web` port 3000. Service yang naik: `postgres`, `redis`, `bot`, dan `web`. Bot dan web memakai Postgres dan Redis di compose yang sama.
+Dokploy uses `docker-compose.yml`. Attach the domain to the `web` service on port 3000. The services that start are `postgres`, `redis`, `bot`, and `web`. The bot and web use the Postgres and Redis in that same compose file.
 
-Bot tidak punya port publik. Kontainer web tidak dipublikasikan ke port host. Satu replika. `PLAYER_URL` dan `PLAYER_TOKEN` diisi di lingkungan bot.
+The bot has no public port. The web container is not published on a host port. One replica. Set `PLAYER_URL` and `PLAYER_TOKEN` in the bot environment.
 
-## Cek
+## Checks
 
 ```bash
 pnpm typecheck
