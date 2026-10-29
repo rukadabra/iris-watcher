@@ -7,6 +7,7 @@ import type { BotEnv } from "./env"
 import type { PrefixStore } from "./prefix-store"
 import { chooseLiveChannel, LIVE_PICK_ID } from "./live"
 import { present, reply, safe, warn } from "./reply"
+import { BOOST_PICK_ID, chooseGreetingChannel, greetingKindForMessage, greetSystemMessage, WELCOME_PICK_ID } from "./welcome"
 import { adjustVolume, botVoiceChannel, describeQueue, pausePlayback, resumePlayback, skipTrack, stopPlayback, toggleLoop, watchAlone } from "./voice"
 
 const recentCommands = new Map<string, number>()
@@ -170,6 +171,10 @@ export function registerEvents(client: Client, prefixes: PrefixStore, commandGat
   })
 
   client.on(Events.MessageCreate, (message) => {
+    if (greetingKindForMessage(message.type)) {
+      void greetSystemMessage(message).catch((error: unknown) => console.error("Greeting failed", error))
+      return
+    }
     void onMessage(message, prefixes, commandGate, env)
   })
 
@@ -182,6 +187,11 @@ export function registerEvents(client: Client, prefixes: PrefixStore, commandGat
 
   client.on(Events.InteractionCreate, (interaction) => {
     if (interaction.isChannelSelectMenu()) {
+      if (interaction.customId === WELCOME_PICK_ID || interaction.customId === BOOST_PICK_ID) {
+        const kind = interaction.customId === BOOST_PICK_ID ? "boost" : "welcome"
+        void chooseGreetingChannel(kind, interaction).catch((error: unknown) => console.error(error))
+        return
+      }
       if (interaction.customId !== LIVE_PICK_ID) return
       void chooseLiveChannel(interaction, env).catch((error: unknown) => console.error(error))
       return

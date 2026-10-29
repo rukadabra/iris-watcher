@@ -8,6 +8,7 @@ import {
   setDisabledCommands,
   setGuildLiveChannel,
   setGuildPrefix,
+  setGuildGreeting,
   setLiveWatchEnabled,
 } from "@iris/db"
 import {
@@ -16,11 +17,13 @@ import {
   DEFAULT_PREFIX,
   guildCommandsKey,
   guildPrefixKey,
+  isGreetingKind,
   isSnowflake,
   isToggleableCommand,
   LIVE_REFRESH_CHANNEL,
   parseChannelTarget,
   parseCustomPrefix,
+  parseWelcomeMessage,
   PREFIX_CHANNEL,
   sanitizeDisabledCommands,
 } from "@iris/shared"
@@ -122,6 +125,43 @@ export async function saveAlertChannel(
   } catch (error) {
     console.error(error)
     return { error: "The alert channel could not be saved", saved: false }
+  }
+
+  return done()
+}
+
+export async function saveWelcome(
+  _state: PrefixActionState,
+  formData: FormData,
+): Promise<PrefixActionState> {
+  const guildId = String(formData.get("guildId") ?? "")
+  const intent = String(formData.get("intent") ?? "save")
+  const kind = String(formData.get("kind") ?? "welcome")
+  if (!isGreetingKind(kind)) return { error: "That change is not valid", saved: false }
+  const ready = await prepare(guildId)
+  if (!ready.ok) return { error: ready.error, saved: false }
+
+  try {
+    const guild = await getGuild(guildId)
+    if (!guild) return { error: "Iris is not in this server", saved: false }
+    if (intent === "off") {
+      await setGuildGreeting(guildId, kind, { enabled: false })
+      return done()
+    }
+    if (intent !== "save") return { error: "That change is not valid", saved: false }
+
+    const channelId = String(formData.get("channelId") ?? "")
+    if (!isSnowflake(channelId)) return { error: "Choose a text channel", saved: false }
+    const parsed = parseWelcomeMessage(String(formData.get("message") ?? ""))
+    if (!parsed.ok) return { error: parsed.error, saved: false }
+    const channels = await fetchGuildTextChannels(guildId)
+    if (!channels.some((channel) => channel.id === channelId)) {
+      return { error: "Iris cannot use that channel", saved: false }
+    }
+    await setGuildGreeting(guildId, kind, { channelId, enabled: true, message: parsed.message })
+  } catch (error) {
+    console.error(error)
+    return { error: "The banner could not be saved", saved: false }
   }
 
   return done()

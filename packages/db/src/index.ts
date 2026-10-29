@@ -1,5 +1,18 @@
 export { closeDb, getDb, getSql } from "./client"
-export { getGuild, getGuildVolume, listGuildPrefixes, listGuildsByIds, setDisabledCommands, setGuildPrefix, setGuildVolume, upsertGuild } from "./guilds"
+export {
+  getGuild,
+  getGuildVolume,
+  guildGreeting,
+  setGuildGreeting,
+  type GreetingSettings,
+  listGuildPrefixes,
+  listGuildsByIds,
+  setDisabledCommands,
+  setGuildPrefix,
+  setGuildVolume,
+  upsertGuild,
+  type WelcomeChange,
+} from "./guilds"
 export {
   listGuildLiveWatches,
   listLiveWatches,

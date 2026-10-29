@@ -7,6 +7,12 @@ export const guilds = pgTable("guilds", {
   liveChannelId: text("live_channel_id"),
   disabledCommands: text("disabled_commands").array().notNull().default([]),
   volume: smallint("volume").notNull().default(10),
+  welcomeChannelId: text("welcome_channel_id"),
+  welcomeEnabled: boolean("welcome_enabled").notNull().default(false),
+  welcomeMessage: text("welcome_message"),
+  boostChannelId: text("boost_channel_id"),
+  boostEnabled: boolean("boost_enabled").notNull().default(false),
+  boostMessage: text("boost_message"),
   joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })

@@ -293,11 +293,11 @@ function takePending(messageId: string, guildId: string): { watch: PendingWatch 
   return { watch: waiting, expired: false }
 }
 
-function channelLabel(channel: { name?: string } | null | undefined): string {
+export function channelLabel(channel: { name?: string } | null | undefined): string {
   return channel?.name ? `#${safe(channel.name)}` : "the chosen channel"
 }
 
-function memberPermissions(
+export function memberPermissions(
   interaction: ChannelSelectMenuInteraction,
 ): PermissionsBitField | string | null {
   const member = interaction.member
@@ -305,14 +305,14 @@ function memberPermissions(
   return member.permissions
 }
 
-function manages(ownerId: string, userId: string, permissions: PermissionsBitField | string | null): boolean {
+export function manages(ownerId: string, userId: string, permissions: PermissionsBitField | string | null): boolean {
   if (userId === ownerId) return true
   if (!permissions) return false
   if (typeof permissions === "string") return canManageGuild(permissions, false)
   return canManageGuild(permissions.bitfield.toString(), false)
 }
 
-async function selectedTextChannel(
+export async function selectedTextChannel(
   interaction: ChannelSelectMenuInteraction,
 ): Promise<{ ok: true; channel: GuildBasedChannel } | { ok: false; reason: string }> {
   const channelId = interaction.values[0]
@@ -334,7 +334,7 @@ async function selectedTextChannel(
   return { ok: true, channel }
 }
 
-function ephemeral(message: Message, item: Note) {
+export function ephemeral(message: Message, item: Note) {
   return {
     flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     components: present(message, item).components,

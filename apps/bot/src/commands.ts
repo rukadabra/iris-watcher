@@ -4,6 +4,7 @@ import type { BotEnv } from "./env"
 import { animeLookup, defineLookup, hnLookup, lyricsLookup, newsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
 import { searchRemoteTrack } from "./player-client"
 import { runLiveCommand } from "./live"
+import { runGreetingCommand } from "./welcome"
 import { editReply, note, reply, safe, scene, warn } from "./reply"
 import {
   attachControls,
@@ -121,6 +122,16 @@ export const commands: Record<string, BotCommand> = {
         message,
         scene("✏️ Prefix", safe(prefix), `-# Change it at ${env.WEB_ORIGIN}/dashboard`),
       )
+    },
+  },
+  welcome: {
+    async execute({ message, args, env }) {
+      await runGreetingCommand("welcome", message, args, env)
+    },
+  },
+  boost: {
+    async execute({ message, args, env }) {
+      await runGreetingCommand("boost", message, args, env)
     },
   },
   live: {
