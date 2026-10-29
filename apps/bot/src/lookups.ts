@@ -7,11 +7,14 @@ import {
   pickLyrics,
   pickPlace,
   pickRate,
+  pickRssHeadlines,
+  pickStories,
   pickTrivia,
   pickWiki,
   pickWikiTitle,
   readable,
   type RateArgs,
+  type StoryHit,
 } from "@iris/shared"
 import { note, safe, scene, warn, type Note } from "./reply"
 
@@ -59,6 +62,17 @@ export async function animeLookup(query: string): Promise<Note> {
   const title = query.trim().slice(0, 200)
   if (!title) return warn("No title", "Name an anime.")
   return remember(`anime:${title.toLowerCase()}`, () => loadAnime(title))
+}
+
+export async function newsLookup(query: string): Promise<Note> {
+  const topic = query.trim().slice(0, 120)
+  if (!topic) return warn("No topic", "Name a topic, such as Bali or climate.")
+  return remember(`news:${topic.toLowerCase()}`, () => loadNews(topic))
+}
+
+export async function hnLookup(query: string): Promise<Note> {
+  const topic = query.trim().slice(0, 120)
+  return remember(`hn:${topic.toLowerCase()}`, () => loadHn(topic))
 }
 
 export async function triviaLookup(): Promise<Note> {
@@ -168,6 +182,35 @@ async function loadRate(parsed: RateArgs): Promise<Note> {
   )
 }
 
+async function loadNews(topic: string): Promise<Note> {
+  const loaded = await readText(
+    `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=en-US&gl=US&ceid=US:en`,
+  )
+  const stories = loaded.ok ? pickRssHeadlines(loaded.body) : []
+  if (stories.length === 0) return warn("No headlines", "No headlines matched that topic.")
+  return note("📰 News", `${storyLines(stories)}\n\n-# Headlines from Google News`)
+}
+
+async function loadHn(topic: string): Promise<Note> {
+  const url = topic
+    ? `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(topic)}&tags=story&hitsPerPage=5`
+    : "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=5"
+  const loaded = await readJson(url)
+  const stories = loaded.ok ? pickStories(loaded.body) : []
+  if (stories.length === 0) return warn("No stories", "Hacker News did not return a story.")
+  const heading = topic ? safe(topic) : "Front page"
+  return scene("🟧 Hacker News", heading, `${storyLines(stories)}\n\n-# From Hacker News`)
+}
+
+function storyLines(stories: StoryHit[]): string {
+  return stories
+    .map((story) => {
+      const source = story.source ? `\n-# ${readable(story.source, 80)}` : ""
+      return `**${readable(story.title, 180)}**${source}\n${story.url}`
+    })
+    .join("\n\n")
+}
+
 async function loadAnime(title: string): Promise<Note> {
   const loaded = await readJson("https://graphql.anilist.co", {
     method: "POST",
@@ -202,6 +245,20 @@ function artistLine(artist: string): string {
 function formatAmount(value: number): string {
   const digits = Math.abs(value) >= 100 ? 2 : 6
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(value)
+}
+
+async function readText(url: string): Promise<{ ok: true; body: string } | { ok: false }> {
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/rss+xml, application/xml, text/xml", "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(8_000),
+    })
+    if (!response.ok) return { ok: false }
+    return { ok: true, body: await response.text() }
+  } catch (error) {
+    console.error("Lookup failed", new URL(url).origin, error)
+    return { ok: false }
+  }
 }
 
 async function readJson(url: string, init?: RequestInit): Promise<{ ok: true; body: unknown } | { ok: false }> {

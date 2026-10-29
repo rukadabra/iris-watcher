@@ -54,6 +54,8 @@ const tools = [
       ["Frankfurter", "A daily exchange rate"],
       ["AniList", "Anime by title"],
       ["Open Trivia DB", "One trivia question"],
+      ["Google News", "Headlines for a topic"],
+      ["Hacker News", "Front page, or a search"],
     ],
   },
   {
@@ -163,7 +165,7 @@ export default async function HomePage() {
           <h2>Lookups</h2>
           <p>
             Lyrics, weather, a Wikipedia summary, an English definition, a daily exchange rate, an
-            anime title, and one trivia question. These calls need no token.
+            anime title, trivia, headlines, and Hacker News. These calls need no token.
           </p>
         </article>
       </section>

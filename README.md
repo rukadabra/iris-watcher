@@ -86,6 +86,8 @@ Examples use the default prefix. A server with a custom prefix uses that prefix 
 | `!iris rate [amount] <from> <to>` | Converts a daily exchange rate |
 | `!iris anime <title>` | Shows an anime by title |
 | `!iris trivia` | Asks one question. The answer is hidden |
+| `!iris news <topic>` | Shows recent headlines for a topic |
+| `!iris hn [query]` | Shows the Hacker News front page, or a search |
 
 The playback card also has buttons for pause, resume, next, stop, queue pages, loop, and volume. Volume moves by 10%. Each server keeps its own level.
 

@@ -186,6 +186,22 @@ export const commandList = [
     usage: "trivia",
     examples: [],
   },
+  {
+    name: "news",
+    group: "lookups",
+    emoji: "📰",
+    summary: "Shows recent headlines for a topic",
+    usage: "news <topic>",
+    examples: ["news Bali"],
+  },
+  {
+    name: "hn",
+    group: "lookups",
+    emoji: "🟧",
+    summary: "Shows the Hacker News front page, or stories matching a search",
+    usage: "hn [query]",
+    examples: ["hn", "hn indonesia"],
+  },
 ] as const satisfies ReadonlyArray<{
   name: string
   group: CommandGroup
