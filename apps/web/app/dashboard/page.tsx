@@ -20,7 +20,7 @@ import Image from "next/image"
 import { InviteLink } from "@/components/invite-link"
 import { PrefixForm } from "@/components/prefix-form"
 import { CommandPanel, GreetingPanel, WatchPanel } from "@/components/server-tools"
-import { fetchDiscordGuilds, fetchGuildTextChannels } from "@/lib/discord"
+import { fetchDiscordGuilds, fetchGuildBoosts, fetchGuildTextChannels } from "@/lib/discord"
 import { readWebEnv } from "@/lib/env"
 import { getSession } from "@/lib/session"
 import type { Metadata } from "next"
@@ -81,6 +81,7 @@ export default async function DashboardPage({
   let missing: Array<{ id: string; name: string; icon: string | null }> = []
   let watches: LiveWatch[] = []
   let textChannels = new Map<string, Array<{ id: string; name: string }>>()
+  let boosts = new Map<string, { boosts: number; level: number }>()
   let loadError = ""
 
   try {
@@ -106,16 +107,21 @@ export default async function DashboardPage({
       .filter((guild) => !known.has(guild.id))
       .map((guild) => ({ id: guild.id, name: guild.name, icon: guild.icon }))
     watches = await listLiveWatchesByGuildIds(installed.map((guild) => guild.id))
-    const listed = await Promise.all(
-      installed.map(async (guild) => [guild.id, await fetchGuildTextChannels(guild.id)] as const),
-    )
+    const [listed, boosted] = await Promise.all([
+      Promise.all(installed.map(async (guild) => [guild.id, await fetchGuildTextChannels(guild.id)] as const)),
+      Promise.all(installed.map(async (guild) => [guild.id, await fetchGuildBoosts(guild.id)] as const)),
+    ])
     textChannels = new Map(listed)
+    boosts = new Map(boosted)
   } catch (cause) {
     console.error(cause)
     loadError = "The server list could not be loaded. Sign in again."
   }
 
   const invite = inviteUrl(config.env.DISCORD_CLIENT_ID)
+  const avatarUrl = session.avatar
+    ? `https://cdn.discordapp.com/avatars/${session.userId}/${session.avatar}.png?size=256`
+    : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(session.userId) >> 22n) % 6n)}.png`
 
   return (
     <main className="page dash">
@@ -136,6 +142,14 @@ export default async function DashboardPage({
         <section className="server-list" aria-label="Servers with Iris">
           {installed.map((guild) => {
             const prefix = guild.prefix ?? config.env.DEFAULT_PREFIX
+            const member = {
+              userId: session.userId,
+              name: session.username,
+              avatarUrl,
+              server: guild.name,
+              iconUrl: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128` : null,
+              ...(boosts.get(guild.id) ?? { boosts: 0, level: 0 }),
+            }
             return (
               <article key={guild.id} className="server">
                 <header className="server-head">
@@ -191,6 +205,7 @@ export default async function DashboardPage({
                         message={settings.message}
                         defaultMessage={greetingDefaults[kind]}
                         maxLength={WELCOME_MESSAGE_MAX}
+                        member={member}
                       />
                     )
                   })}

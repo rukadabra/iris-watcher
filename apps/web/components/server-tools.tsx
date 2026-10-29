@@ -1,7 +1,8 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import { addWatch, saveAlertChannel, saveWelcome, setCommandEnabled, updateWatch } from "@/app/dashboard/actions"
+import { GreetingPreview, type PreviewMember } from "@/components/greeting-preview"
 import type { PrefixActionState } from "@/lib/types"
 
 const initialState: PrefixActionState = { error: "", saved: false }
@@ -239,6 +240,7 @@ export function GreetingPanel({
   message,
   defaultMessage,
   maxLength,
+  member,
 }: {
   kind: "welcome" | "boost"
   guildId: string
@@ -249,8 +251,10 @@ export function GreetingPanel({
   message: string | null
   defaultMessage: string
   maxLength: number
+  member: PreviewMember
 }) {
   const [state, action, pending] = useActionState(saveWelcome, initialState)
+  const [draft, setDraft] = useState(message ?? "")
   const on = enabled && Boolean(channelId)
   const known = channels.some((channel) => channel.id === channelId)
   const options = known || !channelId || !channelName ? channels : [{ id: channelId, name: channelName }, ...channels]
@@ -283,6 +287,7 @@ export function GreetingPanel({
             name="message"
             aria-label={`${text.title} message`}
             defaultValue={message ?? ""}
+            onChange={(event) => setDraft(event.target.value)}
             placeholder={defaultMessage}
             maxLength={maxLength}
             rows={3}
@@ -305,6 +310,7 @@ export function GreetingPanel({
           </div>
         </form>
       )}
+      <GreetingPreview kind={kind} message={draft} member={member} />
     </section>
   )
 }
