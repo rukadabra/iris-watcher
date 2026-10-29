@@ -54,7 +54,7 @@ const tools = [
       ["Frankfurter", "A daily exchange rate"],
       ["AniList", "Anime by title"],
       ["Open Trivia DB", "One trivia question"],
-      ["Google News", "Headlines for a topic"],
+      ["Bing News", "Headlines for a topic"],
       ["Hacker News", "Front page, or a search"],
     ],
   },

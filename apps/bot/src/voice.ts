@@ -259,6 +259,11 @@ export function playingTitle(guildId: string): string | null {
   return title || null
 }
 
+export function playingArtwork(guildId: string): string | null {
+  const videoId = sessions.get(guildId)?.current?.videoId ?? ""
+  return /^[\w-]{11}$/.test(videoId) ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null
+}
+
 function remoteTrack(track: RemoteTrack): Track {
   return { title: track.title, videoId: track.id }
 }
