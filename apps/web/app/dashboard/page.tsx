@@ -1,9 +1,25 @@
-import { migrate, listGuildsByIds, listLiveWatchesByGuildIds, type LiveWatch } from "@iris/db"
-import { canManageGuild, commandGroups, commandList, inviteUrl, isToggleableCommand } from "@iris/shared"
+import {
+  guildGreeting,
+  migrate,
+  listGuildsByIds,
+  listLiveWatchesByGuildIds,
+  type GreetingSettings,
+  type LiveWatch,
+} from "@iris/db"
+import {
+  canManageGuild,
+  commandGroups,
+  commandList,
+  GREETING_KINDS,
+  greetingDefaults,
+  inviteUrl,
+  isToggleableCommand,
+  WELCOME_MESSAGE_MAX,
+} from "@iris/shared"
 import Image from "next/image"
 import { InviteLink } from "@/components/invite-link"
 import { PrefixForm } from "@/components/prefix-form"
-import { CommandPanel, WatchPanel } from "@/components/server-tools"
+import { CommandPanel, GreetingPanel, WatchPanel } from "@/components/server-tools"
 import { fetchDiscordGuilds, fetchGuildTextChannels } from "@/lib/discord"
 import { readWebEnv } from "@/lib/env"
 import { getSession } from "@/lib/session"
@@ -40,7 +56,7 @@ export default async function DashboardPage({
       <main className="page dash">
         <h1>Dashboard</h1>
         <p className="dash-lead">
-          Sign in with Discord to manage a server's prefix, YouTube alerts, and commands.
+          Sign in with Discord to manage a server's prefix, YouTube alerts, welcome and boost banners, and commands.
         </p>
         {error ? <p className="notice">{error}</p> : null}
         <div className="actions">
@@ -59,6 +75,8 @@ export default async function DashboardPage({
     prefix: string | null
     liveChannelId: string | null
     disabledCommands: string[]
+    welcome: GreetingSettings
+    boost: GreetingSettings
   }> = []
   let missing: Array<{ id: string; name: string; icon: string | null }> = []
   let watches: LiveWatch[] = []
@@ -81,6 +99,8 @@ export default async function DashboardPage({
         prefix: known.get(guild.id)?.prefix ?? null,
         liveChannelId: known.get(guild.id)?.liveChannelId ?? null,
         disabledCommands: known.get(guild.id)?.disabledCommands ?? [],
+        welcome: guildGreeting(known.get(guild.id) ?? null, "welcome"),
+        boost: guildGreeting(known.get(guild.id) ?? null, "boost"),
       }))
     missing = manageable
       .filter((guild) => !known.has(guild.id))
@@ -102,7 +122,7 @@ export default async function DashboardPage({
       <div className="dash-bar">
         <div>
           <h1>Dashboard</h1>
-          <p className="dash-lead">Prefix, YouTube alerts, and commands for the servers you manage.</p>
+          <p className="dash-lead">Prefix, YouTube alerts, welcome and boost banners, and commands for the servers you manage.</p>
         </div>
       </div>
       {error ? <p className="notice">{error}</p> : null}
@@ -155,6 +175,25 @@ export default async function DashboardPage({
                         liveVideoId: watch.liveVideoId,
                       }))}
                   />
+                </div>
+                <div className="server-grid greeting-grid">
+                  {GREETING_KINDS.map((kind) => {
+                    const settings = kind === "boost" ? guild.boost : guild.welcome
+                    return (
+                      <GreetingPanel
+                        key={kind}
+                        kind={kind}
+                        guildId={guild.id}
+                        channelId={settings.channelId}
+                        channelName={textChannels.get(guild.id)?.find((channel) => channel.id === settings.channelId)?.name}
+                        channels={textChannels.get(guild.id) ?? []}
+                        enabled={settings.enabled}
+                        message={settings.message}
+                        defaultMessage={greetingDefaults[kind]}
+                        maxLength={WELCOME_MESSAGE_MAX}
+                      />
+                    )
+                  })}
                 </div>
                 <CommandPanel
                   guildId={guild.id}

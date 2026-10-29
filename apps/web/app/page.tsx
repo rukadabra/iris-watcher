@@ -12,6 +12,7 @@ const tools = [
       ["@discordjs/voice", "The voice connection"],
       ["opusscript", "Opus for the song you hear"],
       ["@snazzah/davey", "DAVE, included with the voice package"],
+      ["@napi-rs/canvas", "Draws the welcome and boost banners"],
     ],
   },
   {
@@ -32,7 +33,7 @@ const tools = [
   {
     title: "Data",
     items: [
-      ["PostgreSQL", "Prefix, alerts, commands, and volume"],
+      ["PostgreSQL", "Prefix, alerts, greetings, commands, and volume"],
       ["Redis", "Cache, sign-in sessions, and status"],
       ["Drizzle", "How the bot and site read Postgres"],
     ],
@@ -135,8 +136,8 @@ export default async function HomePage() {
         <article className="point">
           <h2>Changed on the web</h2>
           <p>
-            Sign in with Discord. A server manager can change the prefix, the YouTube list, and which
-            commands are on.
+            Sign in with Discord. A server manager can change the prefix, the YouTube list, the welcome
+            and boost banners, and which commands are on.
           </p>
         </article>
         <article className="point">
@@ -159,6 +160,13 @@ export default async function HomePage() {
           <p>
             A manager can watch up to 50 YouTube channels and pick the text channel that receives the
             card. The list belongs to that server.
+          </p>
+        </article>
+        <article className="point">
+          <h2>Welcome and boost banners</h2>
+          <p>
+            New members get a welcome banner with their avatar and name. Members who boost get a
+            thank-you banner with the boost count. Each server writes its own message.
           </p>
         </article>
         <article className="point">

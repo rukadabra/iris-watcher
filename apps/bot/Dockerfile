@@ -20,8 +20,10 @@ RUN pnpm --filter @iris/bot build
 RUN pnpm --filter @iris/bot deploy --legacy --prod /out
 
 FROM node:24-alpine AS runner
+RUN apk add --no-cache font-noto font-noto-emoji
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /out ./
 COPY --from=build /app/apps/bot/dist ./dist
+COPY --from=build /app/apps/bot/assets ./assets
 CMD ["node", "dist/index.js"]

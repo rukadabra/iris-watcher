@@ -2,7 +2,7 @@
 
 Discord bot for many servers, plus a web dashboard. Commands are prefix-only. The default prefix is `!iris`. Iris does not register slash commands.
 
-A server manager can change that server's prefix, YouTube live alerts, and which commands are on. `help` and `prefix` stay available. Music plays in a voice channel. The playback card can pause, skip, loop, and change volume. Volume belongs to that server: steps of 10%, from 0% to 200%, starting at 10% until someone changes it. 100% is the song's own loudness.
+A server manager can change that server's prefix, YouTube live alerts, welcome and boost banners, and which commands are on. `help` and `prefix` stay available. Music plays in a voice channel. The playback card can pause, skip, loop, and change volume. Volume belongs to that server: steps of 10%, from 0% to 200%, starting at 10% until someone changes it. 100% is the song's own loudness.
 
 ## Tools
 
@@ -14,7 +14,8 @@ A server manager can change that server's prefix, YouTube live alerts, and which
 | ffmpeg | Prepares PCM audio on the player |
 | Next.js 16.4 | The website and dashboard |
 | React 19 | The pages |
-| PostgreSQL 17 | Prefix, alerts, disabled commands, and volume |
+| @napi-rs/canvas 1.0 | Draws the welcome and boost banners |
+| PostgreSQL 17 | Prefix, alerts, welcome and boost banners, disabled commands, and volume |
 | Redis 7 | Prefix cache, dashboard sessions, and online status |
 | Drizzle 0.45 | Database access from the bot and the site |
 | Node.js 24.17 or newer | Runtime |
@@ -65,6 +66,14 @@ Examples use the default prefix. A server with a custom prefix uses that prefix 
 | `!iris about` | Who made Iris, and why |
 | `!iris ping` | Checks that Iris is online |
 | `!iris prefix` | Shows this server's prefix |
+| `!iris welcome` | Opens the welcome-channel menu and turns welcome banners on |
+| `!iris welcome message <text>` | Changes the welcome text. `{user}`, `{name}`, and `{server}` are filled in. `reset` restores the default |
+| `!iris welcome test` | Shows the banner for you, as a preview |
+| `!iris welcome off` | Turns welcome banners off. `on` turns them back on |
+| `!iris boost` | Opens the boost-channel menu and turns boost thank-yous on |
+| `!iris boost message <text>` | Changes the thank-you text. Adds `{boosts}` and `{level}` to the welcome placeholders |
+| `!iris boost test` | Shows the boost banner for you, as a preview |
+| `!iris boost off` | Turns boost thank-yous off. `on` turns them back on |
 | `!iris join` | Joins your voice channel |
 | `!iris play [new] <title or links...>` | Plays a YouTube title, links, or a playlist. `new` replaces the queue |
 | `!iris pause` | Pauses |

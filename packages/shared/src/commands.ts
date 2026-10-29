@@ -41,6 +41,24 @@ export const commandList = [
     examples: [],
   },
   {
+    name: "welcome",
+    group: "general",
+    emoji: "👋",
+    summary:
+      "Greets new members with a banner. Choose the channel from the menu. message changes the text, test shows a preview, off turns it off",
+    usage: "welcome [off|test|message <text>]",
+    examples: ["welcome", "welcome message Hi {user}, welcome to {server}!", "welcome test"],
+  },
+  {
+    name: "boost",
+    group: "general",
+    emoji: "💎",
+    summary:
+      "Thanks members who boost the server with a banner. Choose the channel from the menu. message changes the text, test shows a preview, off turns it off",
+    usage: "boost [off|test|message <text>]",
+    examples: ["boost", "boost message Thank you {user}! We now have {boosts} boosts.", "boost test"],
+  },
+  {
     name: "join",
     group: "music",
     emoji: "🎧",

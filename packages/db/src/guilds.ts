@@ -56,6 +56,45 @@ export async function setGuildVolume(id: string, volume: number): Promise<void> 
   })
 }
 
+export type WelcomeChange = {
+  channelId?: string
+  enabled?: boolean
+  message?: string | null
+}
+
+export type GreetingSettings = {
+  channelId: string | null
+  enabled: boolean
+  message: string | null
+}
+
+export function guildGreeting(row: GuildRecord | null, kind: "welcome" | "boost"): GreetingSettings {
+  if (!row) return { channelId: null, enabled: false, message: null }
+  return kind === "boost"
+    ? { channelId: row.boostChannelId, enabled: row.boostEnabled, message: row.boostMessage }
+    : { channelId: row.welcomeChannelId, enabled: row.welcomeEnabled, message: row.welcomeMessage }
+}
+
+export async function setGuildGreeting(
+  id: string,
+  kind: "welcome" | "boost",
+  change: WelcomeChange,
+): Promise<GuildRecord | null> {
+  const values: Partial<typeof guilds.$inferInsert> =
+    kind === "boost"
+      ? { boostChannelId: change.channelId, boostEnabled: change.enabled, boostMessage: change.message }
+      : { welcomeChannelId: change.channelId, welcomeEnabled: change.enabled, welcomeMessage: change.message }
+  for (const key of Object.keys(values) as Array<keyof typeof values>) {
+    if (values[key] === undefined) delete values[key]
+  }
+  const rows = await getDb()
+    .update(guilds)
+    .set({ ...values, updatedAt: new Date() })
+    .where(eq(guilds.id, id))
+    .returning()
+  return rows[0] ?? null
+}
+
 export async function setGuildPrefix(id: string, prefix: string | null): Promise<boolean> {
   const rows = await getDb()
     .update(guilds)

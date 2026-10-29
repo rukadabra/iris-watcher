@@ -36,9 +36,33 @@ ALTER TABLE guilds ADD COLUMN IF NOT EXISTS live_channel_id text;
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS disabled_commands text[] NOT NULL DEFAULT '{}';
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS volume smallint NOT NULL DEFAULT 10;
 ALTER TABLE live_watches ADD COLUMN IF NOT EXISTS enabled boolean NOT NULL DEFAULT true;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS welcome_channel_id text;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS welcome_enabled boolean NOT NULL DEFAULT false;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS welcome_message text;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS boost_channel_id text;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS boost_enabled boolean NOT NULL DEFAULT false;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS boost_message text;
 
 DO $$ BEGIN
   ALTER TABLE guilds ADD CONSTRAINT guilds_volume_check CHECK (volume BETWEEN 0 AND 200 AND volume % 10 = 0);
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE guilds ADD CONSTRAINT guilds_welcome_check CHECK (
+    (welcome_channel_id IS NULL OR welcome_channel_id ~ '^[0-9]{5,22}$')
+    AND (welcome_message IS NULL OR char_length(welcome_message) BETWEEN 1 AND 300)
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE guilds ADD CONSTRAINT guilds_boost_check CHECK (
+    (boost_channel_id IS NULL OR boost_channel_id ~ '^[0-9]{5,22}$')
+    AND (boost_message IS NULL OR char_length(boost_message) BETWEEN 1 AND 300)
+  );
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;

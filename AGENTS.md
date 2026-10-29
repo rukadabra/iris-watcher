@@ -15,7 +15,7 @@ This document is for a Cursor agent opening the same repo on another machine. Do
 ## Repo layout
 
 - `apps/bot` — discord.js 14.27.0, one Gateway connection, voice, and health inside the process.
-- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the live-alert list, and which commands are on for that server. `output: "standalone"`.
+- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the live-alert list, the welcome and boost banners, and which commands are on for that server. `output: "standalone"`.
 - `apps/player` — reads YouTube with `yt-dlp` and streams PCM through ffmpeg. It does not hold a Discord token.
 - `packages/shared` — prefix, command list, bot invite URL, and the YouTube link parser.
 - `packages/db` — Postgres, table `guilds`.
@@ -62,6 +62,8 @@ General:
 - `!iris about`
 - `!iris ping`
 - `!iris prefix`
+- `!iris welcome [off|on|test|message <text>]`
+- `!iris boost [off|on|test|message <text>]`
 
 Music:
 
@@ -103,6 +105,10 @@ The person who sends a music command must already be in a normal voice channel. 
 
 The bot asks the player every 2 minutes. If the previous round is still running, the new round waits. A `/live` page whose canonical URL is a video and whose `videoDetails.isLive` is true sends one card, then the video link. The card uses Components V2, so the video preview comes from the link message below it, which Discord turns into an embed. The same video id is not sent again. A failure reading one channel does not clear the marker for a stream that is still going. When the `/live` page is no longer live, that marker is cleared so the next stream notifies again.
 
+`welcome` does not use the `GuildMembers` intent. Iris reacts to Discord's own join system message (`MessageType.UserJoin`), so the server must keep "Send a random welcome message when someone joins" on under System Messages. The channel, the on/off state, and the text belong to one server. Who may change them: the server owner, Manage Server, or Administrator. `!iris welcome` opens a text-channel dropdown and turns banners on. `message` sets the text (at most 300 characters, `{user}`, `{name}`, and `{server}` are filled in, `reset` restores the default). `test` shows a preview to anyone who runs it. `off` and `on` toggle it. Other bots are not greeted, and one server gets at most 10 banners a minute. The banner is a PNG drawn in the bot with `@napi-rs/canvas` and Poppins from `apps/bot/assets/fonts`. The bot image installs `font-noto` and `font-noto-emoji` for names outside Latin. Avatars and server icons are read only from the Discord CDN.
+
+`boost` works the same way with its own channel, on/off state, and text. It reacts to Discord's boost system messages (`GuildBoost` and `GuildBoostTier1` to `GuildBoostTier3`), so "Send a message when someone boosts this server" must stay on. Its text also fills `{boosts}` (the server's boost count) and `{level}` (0 to 3). The boost banner uses a pink and violet theme with a gem badge on the avatar.
+
 ## Discord permissions
 
 Intents: `Guilds`, `GuildMessages`, `MessageContent`, `GuildVoiceStates`. Only Message Content is privileged, and it must be enabled in the Developer Portal.
@@ -111,7 +117,7 @@ The invite uses `scope=bot`. Discord automatically includes `applications.comman
 
 The invite link opens in a new tab. After permissions change, the invite link must be opened again and authorized again.
 
-Dashboard OAuth uses the scope `identify guilds`. Redirect: `${WEB_ORIGIN}/api/auth/callback`. Who may change the prefix, the watch list, the destination channel, and which commands are on: the server owner, Manage Server, or Administrator. Adding a YouTube channel from the dashboard calls the player `POST /channel` with a target that has already been validated. `help` and `prefix` cannot be turned off. The bot rejects any other command that is off, including the matching music buttons. A watch that is off is not checked and receives no card. Discord and the dashboard use the same data.
+Dashboard OAuth uses the scope `identify guilds`. Redirect: `${WEB_ORIGIN}/api/auth/callback`. Who may change the prefix, the watch list, the destination channel, the welcome and boost banners, and which commands are on: the server owner, Manage Server, or Administrator. Adding a YouTube channel from the dashboard calls the player `POST /channel` with a target that has already been validated. `help` and `prefix` cannot be turned off. The bot rejects any other command that is off, including the matching music buttons. A watch that is off is not checked and receives no card. Discord and the dashboard use the same data.
 
 ## Environment
 

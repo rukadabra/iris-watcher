@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
-import { addWatch, saveAlertChannel, setCommandEnabled, updateWatch } from "@/app/dashboard/actions"
+import { addWatch, saveAlertChannel, saveWelcome, setCommandEnabled, updateWatch } from "@/app/dashboard/actions"
 import type { PrefixActionState } from "@/lib/types"
 
 const initialState: PrefixActionState = { error: "", saved: false }
@@ -205,6 +205,107 @@ function WatchIntent({
       </button>
       {state.error ? <p className="form-error">{state.error}</p> : null}
     </form>
+  )
+}
+
+const greetingCopy = {
+  welcome: {
+    title: "Welcome banner",
+    lead: "New members get a banner with their avatar. Discord's own join messages must stay on in Server Settings → System Messages.",
+    who: "the member",
+    extra: null,
+    saved: "Welcome banner saved.",
+  },
+  boost: {
+    title: "Boost thank-you",
+    lead: "Members who boost get a thank-you banner. Discord's own boost messages must stay on in Server Settings → System Messages.",
+    who: "the booster",
+    extra: (
+      <>
+        , <code>{"{boosts}"}</code> for the boost count, <code>{"{level}"}</code> for the server level
+      </>
+    ),
+    saved: "Boost thank-you saved.",
+  },
+} as const
+
+export function GreetingPanel({
+  kind,
+  guildId,
+  channelId,
+  channelName,
+  channels,
+  enabled,
+  message,
+  defaultMessage,
+  maxLength,
+}: {
+  kind: "welcome" | "boost"
+  guildId: string
+  channelId: string | null
+  channelName?: string
+  channels: TextChannel[]
+  enabled: boolean
+  message: string | null
+  defaultMessage: string
+  maxLength: number
+}) {
+  const [state, action, pending] = useActionState(saveWelcome, initialState)
+  const on = enabled && Boolean(channelId)
+  const known = channels.some((channel) => channel.id === channelId)
+  const options = known || !channelId || !channelName ? channels : [{ id: channelId, name: channelName }, ...channels]
+  const text = greetingCopy[kind]
+
+  return (
+    <section className="block" aria-label={text.title}>
+      <div className="block-head">
+        <h3>{text.title}</h3>
+        <span className={on ? "pill live" : "pill idle"}>{on ? `On${channelName ? ` · #${channelName}` : ""}` : "Off"}</span>
+      </div>
+      <p className="meta">{text.lead}</p>
+      {options.length === 0 ? (
+        <p className="meta">The channel list could not be loaded.</p>
+      ) : (
+        <form action={action} className="welcome-form">
+          <input type="hidden" name="guildId" value={guildId} />
+          <input type="hidden" name="kind" value={kind} />
+          <select name="channelId" aria-label={`${text.title} channel`} defaultValue={channelId ?? ""} required>
+            <option value="" disabled>
+              Choose a channel
+            </option>
+            {options.map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                #{channel.name}
+              </option>
+            ))}
+          </select>
+          <textarea
+            name="message"
+            aria-label={`${text.title} message`}
+            defaultValue={message ?? ""}
+            placeholder={defaultMessage}
+            maxLength={maxLength}
+            rows={3}
+          />
+          <p className="meta">
+            Use <code>{"{user}"}</code> to mention {text.who}, <code>{"{name}"}</code> for their name,{" "}
+            <code>{"{server}"}</code> for this server{text.extra}. Leave it empty for the default.
+          </p>
+          <div className="prefix-row">
+            <button type="submit" name="intent" value="save" disabled={pending}>
+              {on ? "Save" : "Save and turn on"}
+            </button>
+            {on ? (
+              <button type="submit" name="intent" value="off" className="quiet" disabled={pending}>
+                Turn off
+              </button>
+            ) : null}
+            {state.error ? <p className="form-error">{state.error}</p> : null}
+            {state.saved ? <p className="form-ok">{text.saved}</p> : null}
+          </div>
+        </form>
+      )}
+    </section>
   )
 }
 

@@ -446,6 +446,19 @@ button:disabled { opacity: 0.6; cursor: wait; }
   font: inherit;
 }
 .prefix-row select { max-width: 16rem; }
+.greeting-grid { grid-template-columns: 1fr 1fr; }
+.welcome-form { display: grid; gap: 0.55rem; }
+.welcome-form select, .welcome-form textarea {
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+}
+.welcome-form select { min-height: 2.6rem; max-width: 16rem; }
+.welcome-form textarea { resize: vertical; min-height: 4.5rem; }
+.welcome-form .meta { margin: 0; }
 .prefix-row input[name="target"] { flex: 1; min-width: 12rem; }
 .prefix-row .form-error, .prefix-row .form-ok, .command-switch .form-error { flex-basis: 100%; }
 .switch.off {
