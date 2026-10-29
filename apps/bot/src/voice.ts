@@ -254,6 +254,11 @@ export function botVoiceChannel(guildId: string): string | null {
   return session.connection.joinConfig.channelId
 }
 
+export function playingTitle(guildId: string): string | null {
+  const title = sessions.get(guildId)?.current?.title.trim() ?? ""
+  return title || null
+}
+
 function remoteTrack(track: RemoteTrack): Track {
   return { title: track.title, videoId: track.id }
 }

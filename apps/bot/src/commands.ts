@@ -1,6 +1,7 @@
 import { classifyPlayArgs, commandGroups, commandList } from "@iris/shared"
 import type { Message } from "discord.js"
 import type { BotEnv } from "./env"
+import { animeLookup, defineLookup, lyricsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
 import { searchRemoteTrack } from "./player-client"
 import { runLiveCommand } from "./live"
 import { editReply, note, reply, safe, scene, warn } from "./reply"
@@ -11,6 +12,7 @@ import {
   leaveVoice,
   loopStatus,
   pausePlayback,
+  playingTitle,
   playYoutube,
   resumePlayback,
   setLoop,
@@ -193,6 +195,43 @@ export const commands: Record<string, BotCommand> = {
   leave: {
     async execute({ message }) {
       await reply(message, leaveVoice(message.guild?.id ?? ""))
+    },
+  },
+  lyrics: {
+    async execute({ message, args }) {
+      const typed = args.join(" ").trim()
+      const query = typed || playingTitle(message.guild?.id ?? "") || ""
+      await reply(message, await lyricsLookup(query, !typed && Boolean(query)))
+    },
+  },
+  weather: {
+    async execute({ message, args }) {
+      await reply(message, await weatherLookup(args.join(" ")))
+    },
+  },
+  wiki: {
+    async execute({ message, args }) {
+      await reply(message, await wikiLookup(args.join(" ")))
+    },
+  },
+  define: {
+    async execute({ message, args }) {
+      await reply(message, await defineLookup(args.join(" ")))
+    },
+  },
+  rate: {
+    async execute({ message, args }) {
+      await reply(message, await rateLookup(args))
+    },
+  },
+  anime: {
+    async execute({ message, args }) {
+      await reply(message, await animeLookup(args.join(" ")))
+    },
+  },
+  trivia: {
+    async execute({ message }) {
+      await reply(message, await triviaLookup())
     },
   },
 }
