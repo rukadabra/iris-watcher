@@ -77,6 +77,21 @@ export async function fetchGuildTextChannels(guildId: string): Promise<DiscordTe
     .map(({ id, name }) => ({ id, name }))
 }
 
+export async function fetchGuildBoosts(guildId: string): Promise<{ boosts: number; level: number }> {
+  const token = process.env.DISCORD_TOKEN
+  if (!token || !isSnowflake(guildId)) return { boosts: 0, level: 0 }
+  const response = await fetch(`${API}/guilds/${guildId}`, {
+    headers: { authorization: `Bot ${token}` },
+    cache: "no-store",
+  })
+  if (!response.ok) return { boosts: 0, level: 0 }
+  const body = (await response.json()) as { premium_subscription_count?: unknown; premium_tier?: unknown }
+  return {
+    boosts: typeof body.premium_subscription_count === "number" ? body.premium_subscription_count : 0,
+    level: typeof body.premium_tier === "number" ? body.premium_tier : 0,
+  }
+}
+
 export async function fetchDiscordGuilds(accessToken: string): Promise<DiscordGuild[]> {
   const guilds: DiscordGuild[] = []
   let after: string | undefined

@@ -459,6 +459,30 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .welcome-form select { min-height: 2.6rem; max-width: 16rem; }
 .welcome-form textarea { resize: vertical; min-height: 4.5rem; }
 .welcome-form .meta { margin: 0; }
+.greeting-preview { margin: 0.35rem 0 0; display: grid; gap: 0.4rem; }
+.greeting-preview figcaption { font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.discord-message {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: #2b2d31;
+  border-left: 3px solid var(--line);
+  font-family: "gg sans", "Noto Sans", "Helvetica Neue", sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #dbdee1;
+}
+.discord-text { margin: 0; overflow-wrap: anywhere; }
+.discord-text strong { color: #f2f3f5; }
+.discord-mention {
+  padding: 0 0.15rem;
+  border-radius: 3px;
+  background: rgba(88, 101, 242, 0.3);
+  color: #c9cdfb;
+  font-weight: 500;
+}
+.discord-message canvas { width: 100%; height: auto; border-radius: 8px; }
 .prefix-row input[name="target"] { flex: 1; min-width: 12rem; }
 .prefix-row .form-error, .prefix-row .form-ok, .command-switch .form-error { flex-basis: 100%; }
 .switch.off {
