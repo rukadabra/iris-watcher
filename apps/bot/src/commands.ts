@@ -1,5 +1,6 @@
 import { classifyPlayArgs, commandGroups, commandList, inviteUrl } from "@iris/shared"
 import type { Message } from "discord.js"
+import { askCommand } from "./ask"
 import type { BotEnv } from "./env"
 import { animeLookup, defineLookup, hnLookup, lyricsLookup, newsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
 import { searchRemoteTrack } from "./player-client"
@@ -286,6 +287,11 @@ export const commands: Record<string, BotCommand> = {
   hn: {
     async execute({ message, args }) {
       await reply(message, await hnLookup(args.join(" ")))
+    },
+  },
+  ask: {
+    async execute({ message, args, prefix, env }) {
+      await reply(message, await askCommand(message, args.join(" "), prefix, env))
     },
   },
 }

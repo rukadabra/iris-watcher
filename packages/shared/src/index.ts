@@ -80,6 +80,19 @@ export {
   type WelcomeFill,
 } from "./welcome"
 export {
+  AI_PROVIDERS,
+  AI_QUESTION_MAX,
+  aiKeyContext,
+  aiKeyHint,
+  aiProviders,
+  isAiProvider,
+  parseAiKey,
+  parseAiModel,
+  type AiProvider,
+} from "./ai"
+export { askAi, listAiModels, type AiAnswer, type AiFailure, type AiModels, type AiTurn } from "./ai-client"
+export { loadSecretRing, openSecret, sealedWithOldKey, sealSecret, type SecretRing, type SecretRingResult } from "./secret-box"
+export {
   BANNER_FALLBACK_FONTS,
   BANNER_HEIGHT,
   BANNER_WIDTH,

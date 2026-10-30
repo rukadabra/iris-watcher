@@ -97,12 +97,15 @@ Examples use the default prefix. A server with a custom prefix uses that prefix 
 | `!iris trivia` | Asks one question. The answer is hidden |
 | `!iris news <topic>` | Shows recent headlines for a topic |
 | `!iris hn [query]` | Shows the Hacker News front page, or a search |
+| `!iris ask <question>` | Asks the AI model this server chose. Reply to an answer to ask a follow-up |
 
 The playback card also has buttons for pause, resume, next, stop, queue pages, loop, and volume. Volume moves by 10%. Each server keeps its own level.
 
 The person who starts music must already be in a normal voice channel. Iris needs Connect and Speak there. If nobody else stays in that channel for one minute, Iris leaves. Other bots are not counted.
 
 Lookups do not use voice. `lyrics` with no title uses the song playing in that server.
+
+`!iris ask` uses the server's own API key. A manager picks a provider (OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, DeepSeek, or xAI), a model, and a key on the dashboard. Iris checks the key and the model with the provider before saving, then stores the key encrypted. Each person can ask 4 questions a minute, and each server 30 every 10 minutes.
 
 `!iris live` does not use voice. The watch list and the destination channel belong to one Discord server. A server can watch up to 50 YouTube channels. Who may change the list: the server owner, Manage Server, or Administrator.
 
@@ -111,6 +114,8 @@ Lookups do not use voice. `lyrics` with no title uses the song playing in that s
 Dokploy uses `docker-compose.yml`. Attach the domain to the `web` service on port 3000. The services that start are `postgres`, `redis`, `bot`, and `web`. Bot and web connect to the Postgres and Redis in that same compose file.
 
 The bot has no public port. The web container is not published on a host port. Keep the bot at one replica. Set `PLAYER_URL` and `PLAYER_TOKEN` in the bot environment.
+
+For `ask`, set `AI_KEY_SECRET` to the same value for the bot and the web. Create it with `openssl rand -base64 32` and keep it out of git. Losing it means every saved AI key has to be entered again. To rotate it, move the old value to `AI_KEY_SECRET_PREVIOUS` and set a new `AI_KEY_SECRET`. The web saves new keys with the new secret, and the bot re-encrypts old keys the next time each one is used.
 
 ## Checks
 

@@ -1,3 +1,12 @@
+export {
+  getGuildAiSecret,
+  listGuildAiByIds,
+  removeGuildAi,
+  resealGuildAi,
+  saveGuildAi,
+  type GuildAiSecret,
+  type GuildAiSummary,
+} from "./ai"
 export { closeDb, getDb, getSql } from "./client"
 export {
   getGuild,
