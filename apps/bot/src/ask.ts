@@ -25,7 +25,7 @@ const CONTEXT_MAX = 1500
 const CARD_MIN = 600
 const ASK_KICKER = "✨ Ask"
 const ASK_MARK = `-# Iris  ·  ${ASK_KICKER}`
-const USER_LIMIT = { count: 4, ms: 60_000 }
+const USER_LIMIT = { count: 10, ms: 60_000 }
 const GUILD_LIMIT = { count: 30, ms: 10 * 60_000 }
 const ROLE_MAX = 3
 const ROLE_PING_LIMIT = { count: 3, ms: 10 * 60_000 }
@@ -85,7 +85,7 @@ export async function askCommand(
     return note(warn("Not in this channel", `Chat with me in ${places}.`))
   }
   if (limited(`user:${guild.id}:${message.author.id}`, USER_LIMIT) || limited(`guild:${guild.id}`, GUILD_LIMIT)) {
-    return note(warn("Slow down", "Too many questions in a short time. Try again in a minute."))
+    return { type: "chat", text: "Too many messages. Try again in a minute." }
   }
   const context = aiKeyContext(guild.id, record.provider)
   const key = openSecret(env.aiKeys, record.keySealed, context)
