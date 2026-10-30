@@ -17,6 +17,8 @@ import {
 import {
   aiModelListed,
   aiKeyContext,
+  parseAiPersona,
+  parseAiTemperature,
   aiKeyHint,
   aiProviders,
   canManageGuild,
@@ -211,6 +213,10 @@ export async function saveAi(_state: PrefixActionState, formData: FormData): Pro
     if (!isAiProvider(provider)) return failed("Choose a provider")
     const model = parseAiModel(String(formData.get("model") ?? ""))
     if (!model.ok) return failed(model.error)
+    const persona = parseAiPersona(String(formData.get("persona") ?? ""))
+    if (!persona.ok) return failed(persona.error)
+    const temperature = parseAiTemperature(String(formData.get("temperature") ?? ""), provider)
+    if (!temperature.ok) return failed(temperature.error)
     const context = aiKeyContext(guildId, provider)
 
     let key: string
@@ -236,6 +242,8 @@ export async function saveAi(_state: PrefixActionState, formData: FormData): Pro
       keySealed: sealSecret(ring, key, context),
       keyHint: aiKeyHint(key),
       reasoning: formData.get("reasoning") === "on",
+      persona: persona.persona,
+      temperatureTenths: temperature.tenths,
     })
   } catch {
     console.error(`The AI settings for ${guildId} could not be saved`)

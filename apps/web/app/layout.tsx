@@ -27,6 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <footer className="site-footer">
             {invite ? <InviteLink href={invite}>Invite Iris</InviteLink> : null}
+            <a href="/ai">AI guide</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
           </footer>

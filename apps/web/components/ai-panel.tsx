@@ -1,6 +1,6 @@
 "use client"
 
-import { AI_PROVIDERS, aiProviders, isAiProvider, type AiProvider } from "@iris/shared/ai"
+import { AI_PERSONA_MAX, AI_PROVIDERS, aiProviders, aiTemperature, isAiProvider, type AiProvider } from "@iris/shared/ai"
 import { useActionState, useState } from "react"
 import { saveAi } from "@/app/dashboard/actions"
 import type { PrefixActionState } from "@/lib/types"
@@ -14,13 +14,22 @@ export function AiPanel({
 }: {
   guildId: string
   ready: boolean
-  saved: { provider: string; model: string; keyHint: string; reasoning: boolean } | null
+  saved: {
+    provider: string
+    model: string
+    keyHint: string
+    reasoning: boolean
+    persona: string
+    temperatureTenths: number | null
+  } | null
 }) {
   const [state, action, pending] = useActionState(saveAi, initialState)
   const start: AiProvider = saved && isAiProvider(saved.provider) ? saved.provider : "gemini"
   const [provider, setProvider] = useState<AiProvider>(start)
   const info = aiProviders[provider]
   const keeps = saved?.provider === provider
+  const heat = aiTemperature[provider]
+  const savedHeat = keeps && saved.temperatureTenths !== null ? (saved.temperatureTenths / 10).toFixed(1) : ""
 
   return (
     <section className="block" aria-label="AI">
@@ -74,6 +83,34 @@ export function AiPanel({
             autoComplete="new-password"
             required={!keeps}
           />
+          <textarea
+            name="persona"
+            aria-label="Personality"
+            defaultValue={saved?.persona ?? ""}
+            placeholder="Personality, optional. For example: playful and a little sarcastic, loves anime references."
+            maxLength={AI_PERSONA_MAX}
+            rows={2}
+          />
+          <div className="temperature-row">
+            <input
+              key={`temperature-${provider}`}
+              name="temperature"
+              type="number"
+              inputMode="decimal"
+              aria-label="Temperature"
+              defaultValue={savedHeat}
+              placeholder={`Temperature, default ${heat.normal}`}
+              min={0}
+              max={heat.max}
+              step={0.1}
+            />
+            <p className="meta">
+              0 to {heat.max}. Lower is steadier, higher is more varied. Leave it empty for the default. {heat.advice} {heat.caveat}{" "}
+              <a href={`/ai#${provider}`} target="_blank" rel="noopener noreferrer">
+                Temperature guide
+              </a>
+            </p>
+          </div>
           <label className="check-row">
             <input type="checkbox" name="reasoning" defaultChecked={saved?.reasoning ?? false} />
             <span>

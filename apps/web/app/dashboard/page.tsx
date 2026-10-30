@@ -84,7 +84,10 @@ export default async function DashboardPage({
   let watches: LiveWatch[] = []
   let textChannels = new Map<string, Array<{ id: string; name: string }>>()
   let boosts = new Map<string, { boosts: number; level: number }>()
-  let aiSettings = new Map<string, { provider: string; model: string; keyHint: string; reasoning: boolean }>()
+  let aiSettings = new Map<
+    string,
+    { provider: string; model: string; keyHint: string; reasoning: boolean; persona: string; temperatureTenths: number | null }
+  >()
   const aiKeys = readAiKeys()
   const aiReady = aiKeys.ok && aiKeys.ring !== null
   let loadError = ""
@@ -120,7 +123,7 @@ export default async function DashboardPage({
     boosts = new Map(boosted)
     const ai = await listGuildAiByIds(installed.map((guild) => guild.id))
     aiSettings = new Map(
-      ai.map(({ guildId, provider, model, keyHint, reasoning }) => [guildId, { provider, model, keyHint, reasoning }]),
+      ai.map(({ guildId, ...setting }) => [guildId, setting]),
     )
   } catch (cause) {
     console.error(cause)

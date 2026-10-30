@@ -74,6 +74,22 @@ CREATE TABLE IF NOT EXISTS guild_ai (
 );
 
 ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS reasoning boolean NOT NULL DEFAULT false;
+ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS persona text NOT NULL DEFAULT '';
+ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS temperature_tenths smallint;
+
+DO $$ BEGIN
+  ALTER TABLE guild_ai ADD CONSTRAINT guild_ai_persona_check CHECK (char_length(persona) <= 300);
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE guild_ai ADD CONSTRAINT guild_ai_temperature_check CHECK (
+    temperature_tenths IS NULL OR temperature_tenths BETWEEN 0 AND 20
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 DO $$ BEGIN
   ALTER TABLE guilds ADD CONSTRAINT guilds_boost_check CHECK (
