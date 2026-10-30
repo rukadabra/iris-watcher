@@ -10,6 +10,7 @@ import {
   saveLiveWatch,
   setDisabledCommands,
   setGuildLiveChannel,
+  setGuildOutputChannel,
   setGuildPrefix,
   setGuildGreeting,
   setLiveWatchEnabled,
@@ -143,6 +144,33 @@ export async function saveAlertChannel(
   } catch (error) {
     console.error(error)
     return { error: "The alert channel could not be saved", saved: false }
+  }
+
+  return done()
+}
+
+export async function saveOutputChannels(
+  _state: PrefixActionState,
+  formData: FormData,
+): Promise<PrefixActionState> {
+  const guildId = String(formData.get("guildId") ?? "")
+  const picks = { music: String(formData.get("music") ?? ""), lyrics: String(formData.get("lyrics") ?? "") }
+  const ready = await prepare(guildId)
+  if (!ready.ok) return { error: ready.error, saved: false }
+  if (Object.values(picks).some((id) => id && !isSnowflake(id))) return { error: "Choose a text channel", saved: false }
+
+  try {
+    const channels = await fetchGuildTextChannels(guildId)
+    if (Object.values(picks).some((id) => id && !channels.some((channel) => channel.id === id))) {
+      return { error: "Iris cannot use that channel", saved: false }
+    }
+    if (!(await setGuildOutputChannel(guildId, "music", picks.music || null))) {
+      return { error: "Iris is not in this server", saved: false }
+    }
+    await setGuildOutputChannel(guildId, "lyrics", picks.lyrics || null)
+  } catch (error) {
+    console.error(error)
+    return { error: "The channels could not be saved", saved: false }
   }
 
   return done()

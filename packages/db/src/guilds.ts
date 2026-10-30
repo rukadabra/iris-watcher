@@ -36,6 +36,23 @@ export async function setDisabledCommands(id: string, names: string[]): Promise<
   return rows.length > 0
 }
 
+export type OutputKind = "music" | "lyrics"
+
+export async function getGuildOutputChannel(id: string, kind: OutputKind): Promise<string | null> {
+  const column = kind === "music" ? guilds.musicChannelId : guilds.lyricsChannelId
+  const rows = await getDb().select({ channelId: column }).from(guilds).where(eq(guilds.id, id)).limit(1)
+  return rows[0]?.channelId ?? null
+}
+
+export async function setGuildOutputChannel(id: string, kind: OutputKind, channelId: string | null): Promise<boolean> {
+  const rows = await getDb()
+    .update(guilds)
+    .set({ ...(kind === "music" ? { musicChannelId: channelId } : { lyricsChannelId: channelId }), updatedAt: new Date() })
+    .where(eq(guilds.id, id))
+    .returning({ id: guilds.id })
+  return rows.length > 0
+}
+
 const VOLUME_DEFAULT = 10
 
 export async function getGuildVolume(id: string): Promise<number> {

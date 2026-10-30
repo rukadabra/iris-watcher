@@ -5,6 +5,8 @@ export const guilds = pgTable("guilds", {
   name: text("name"),
   prefix: text("prefix"),
   liveChannelId: text("live_channel_id"),
+  musicChannelId: text("music_channel_id"),
+  lyricsChannelId: text("lyrics_channel_id"),
   disabledCommands: text("disabled_commands").array().notNull().default([]),
   volume: smallint("volume").notNull().default(10),
   welcomeChannelId: text("welcome_channel_id"),

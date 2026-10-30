@@ -5,6 +5,7 @@ import type { BotEnv } from "./env"
 import { animeLookup, defineLookup, hnLookup, lyricsLookup, newsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
 import { searchRemoteTrack } from "./player-client"
 import { runLiveCommand } from "./live"
+import { sendTo } from "./output"
 import { runGreetingCommand } from "./welcome"
 import { editReply, note, reply, safe, scene, warn } from "./reply"
 import {
@@ -31,6 +32,7 @@ export type CommandContext = {
   prefix: string
   env: BotEnv
   disabled: ReadonlySet<string>
+  intro?: string
 }
 
 export type BotCommand = {
@@ -141,50 +143,52 @@ export const commands: Record<string, BotCommand> = {
     },
   },
   join: {
-    async execute({ message }) {
-      await reply(message, await joinVoice(message))
+    async execute({ message, intro }) {
+      await sendTo(message, "music", await joinVoice(message), intro)
     },
   },
   play: {
-    async execute({ message, args, env }) {
+    async execute({ message, args, env, intro }) {
       const request = classifyPlayArgs(args)
       if (request.kind === "search") {
         if (!request.query) {
-          await reply(message, attachControls(message.guild?.id ?? "", warn("No title yet", "Send a song title or a YouTube link.")))
+          await sendTo(message, "music", attachControls(message.guild?.id ?? "", warn("No title yet", "Send a song title or a YouTube link.")), intro)
           return
         }
         const found = await searchRemoteTrack(env, request.query)
         if (!found.ok) {
-          await reply(message, attachControls(message.guild?.id ?? "", warn("YouTube", found.error)))
+          await sendTo(message, "music", attachControls(message.guild?.id ?? "", warn("YouTube", found.error)), intro)
           return
         }
-        await reply(
+        await sendTo(
           message,
+          "music",
           await playYoutube(message, env, [{ type: "video", id: found.track.id }], request.fresh),
+          intro,
         )
         return
       }
-      await reply(message, await playYoutube(message, env, request.items, request.fresh))
+      await sendTo(message, "music", await playYoutube(message, env, request.items, request.fresh), intro)
     },
   },
   queue: {
-    async execute({ message, args }) {
+    async execute({ message, args, intro }) {
       const guildId = message.guild?.id ?? ""
       const arg = args[0]?.toLowerCase()
       if (!arg) {
-        await reply(message, describeQueue(guildId, 1))
+        await sendTo(message, "music", describeQueue(guildId, 1), intro)
         return
       }
       if (arg === "berikutnya" || arg === "next") {
-        await reply(message, describeQueue(guildId, "next"))
+        await sendTo(message, "music", describeQueue(guildId, "next"), intro)
         return
       }
       if (arg === "sebelumnya" || arg === "prev") {
-        await reply(message, describeQueue(guildId, "prev"))
+        await sendTo(message, "music", describeQueue(guildId, "prev"), intro)
         return
       }
       if (/^\d+$/.test(arg)) {
-        await reply(message, describeQueue(guildId, Number(arg)))
+        await sendTo(message, "music", describeQueue(guildId, Number(arg)), intro)
         return
       }
       await reply(
@@ -194,59 +198,59 @@ export const commands: Record<string, BotCommand> = {
     },
   },
   pause: {
-    async execute({ message }) {
-      await reply(message, pausePlayback(message.guild?.id ?? ""))
+    async execute({ message, intro }) {
+      await sendTo(message, "music", pausePlayback(message.guild?.id ?? ""), intro)
     },
   },
   resume: {
-    async execute({ message }) {
-      await reply(message, resumePlayback(message.guild?.id ?? ""))
+    async execute({ message, intro }) {
+      await sendTo(message, "music", resumePlayback(message.guild?.id ?? ""), intro)
     },
   },
   next: {
-    async execute({ message }) {
-      await reply(message, skipTrack(message.guild?.id ?? ""))
+    async execute({ message, intro }) {
+      await sendTo(message, "music", skipTrack(message.guild?.id ?? ""), intro)
     },
   },
   skip: {
-    async execute({ message }) {
-      await reply(message, skipTrack(message.guild?.id ?? ""))
+    async execute({ message, intro }) {
+      await sendTo(message, "music", skipTrack(message.guild?.id ?? ""), intro)
     },
   },
   loop: {
-    async execute({ message, args }) {
+    async execute({ message, args, intro }) {
       const guildId = message.guild?.id ?? ""
       const arg = args[0]?.toLowerCase()
       if (!arg) {
-        await reply(message, loopStatus(guildId))
+        await sendTo(message, "music", loopStatus(guildId), intro)
         return
       }
       const mode =
         arg === "satu" || arg === "one" ? "one" : arg === "semua" || arg === "all" ? "all" : arg === "mati" || arg === "off" ? "off" : null
       if (!mode) {
-        await reply(message, attachControls(guildId, warn("Unknown loop", "Use one, all, or off.")))
+        await sendTo(message, "music", attachControls(guildId, warn("Unknown loop", "Use one, all, or off.")), intro)
         return
       }
-      await reply(message, setLoop(guildId, mode))
+      await sendTo(message, "music", setLoop(guildId, mode), intro)
     },
   },
   stop: {
-    async execute({ message }) {
-      await reply(message, stopPlayback(message.guild?.id ?? ""))
+    async execute({ message, intro }) {
+      await sendTo(message, "music", stopPlayback(message.guild?.id ?? ""), intro)
     },
   },
   leave: {
-    async execute({ message }) {
-      await reply(message, leaveVoice(message.guild?.id ?? ""))
+    async execute({ message, intro }) {
+      await sendTo(message, "music", leaveVoice(message.guild?.id ?? ""), intro)
     },
   },
   lyrics: {
-    async execute({ message, args }) {
+    async execute({ message, args, intro }) {
       const typed = args.join(" ").trim()
       const guildId = message.guild?.id ?? ""
       const query = typed || playingTitle(guildId) || ""
       const fromQueue = !typed && Boolean(query)
-      await reply(message, await lyricsLookup(query, fromQueue, fromQueue ? playingArtwork(guildId) : null))
+      await sendTo(message, "lyrics", await lyricsLookup(query, fromQueue, fromQueue ? playingArtwork(guildId) : null), intro)
     },
   },
   weather: {
@@ -314,7 +318,7 @@ export async function answerChat(context: Omit<CommandContext, "args">, result: 
     )
     return
   }
-  await target.execute({ ...context, args })
+  await target.execute({ ...context, args, intro: result.intro })
 }
 
 function uptime(ms: number): string {

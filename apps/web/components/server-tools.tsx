@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState, useState } from "react"
-import { addWatch, saveAlertChannel, saveWelcome, setCommandEnabled, updateWatch } from "@/app/dashboard/actions"
+import { addWatch, saveAlertChannel, saveOutputChannels, saveWelcome, setCommandEnabled, updateWatch } from "@/app/dashboard/actions"
 import { GreetingPreview, type PreviewMember } from "@/components/greeting-preview"
 import type { PrefixActionState } from "@/lib/types"
 
@@ -206,6 +206,64 @@ function WatchIntent({
       </button>
       {state.error ? <p className="form-error">{state.error}</p> : null}
     </form>
+  )
+}
+
+export function OutputPanel({
+  guildId,
+  musicChannelId,
+  lyricsChannelId,
+  channels,
+}: {
+  guildId: string
+  musicChannelId: string | null
+  lyricsChannelId: string | null
+  channels: TextChannel[]
+}) {
+  const [state, action, pending] = useActionState(saveOutputChannels, initialState)
+  const picks = [
+    { name: "music", label: "Music cards", value: musicChannelId },
+    { name: "lyrics", label: "Lyrics", value: lyricsChannelId },
+  ]
+
+  return (
+    <section className="block" aria-label="Output channels">
+      <div className="block-head">
+        <h3>Output channels</h3>
+      </div>
+      <p className="meta">
+        Playback, queue, and now-playing cards go to the music channel. Lyrics go to the lyrics channel. Iris answers
+        with a short line in the channel where she was asked. Leave a channel on &ldquo;Same channel&rdquo; to keep
+        cards where the command was sent.
+      </p>
+      {channels.length === 0 ? (
+        <p className="meta">The channel list could not be loaded.</p>
+      ) : (
+        <form action={action} className="welcome-form">
+          <input type="hidden" name="guildId" value={guildId} />
+          {picks.map((pick) => (
+            <label key={pick.name} className="output-pick">
+              <span>{pick.label}</span>
+              <select name={pick.name} defaultValue={pick.value ?? ""}>
+                <option value="">Same channel</option>
+                {channels.map((channel) => (
+                  <option key={channel.id} value={channel.id}>
+                    #{channel.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <div className="prefix-row">
+            <button type="submit" disabled={pending}>
+              Save
+            </button>
+            {state.error ? <p className="form-error">{state.error}</p> : null}
+            {state.saved ? <p className="form-ok">Output channels saved.</p> : null}
+          </div>
+        </form>
+      )}
+    </section>
   )
 }
 

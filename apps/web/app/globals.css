@@ -476,6 +476,8 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .channel-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .welcome-form textarea { resize: vertical; min-height: 4.5rem; }
 .welcome-form .meta { margin: 0; }
+.output-pick { display: grid; gap: 0.3rem; }
+.output-pick span { font-size: 0.9rem; color: var(--muted); }
 .greeting-preview { margin: 0.35rem 0 0; display: grid; gap: 0.4rem; }
 .greeting-preview figcaption { font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .discord-message {
