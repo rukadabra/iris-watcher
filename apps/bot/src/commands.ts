@@ -1,6 +1,6 @@
 import { classifyPlayArgs, commandGroups, commandList, inviteUrl } from "@iris/shared"
 import type { Message } from "discord.js"
-import { askCommand, sendAsk } from "./ask"
+import { askCommand, sendAsk, type AskResult } from "./ask"
 import type { BotEnv } from "./env"
 import { animeLookup, defineLookup, hnLookup, lyricsLookup, newsLookup, rateLookup, triviaLookup, weatherLookup, wikiLookup } from "./lookups"
 import { searchRemoteTrack } from "./player-client"
@@ -290,10 +290,31 @@ export const commands: Record<string, BotCommand> = {
     },
   },
   ask: {
-    async execute({ message, args, prefix, env }) {
-      await sendAsk(message, await askCommand(message, args.join(" "), prefix, env))
+    async execute({ message, args, prefix, env, disabled }) {
+      await answerChat({ message, prefix, env, disabled }, await askCommand(message, args.join(" "), prefix, env))
     },
   },
+}
+
+export async function answerChat(context: Omit<CommandContext, "args">, result: AskResult): Promise<void> {
+  if (result.type !== "action") {
+    await sendAsk(context.message, result)
+    return
+  }
+  const { command, args } = result.action
+  const target = commands[command]
+  if (!target) return
+  if (context.disabled.has(command)) {
+    await reply(
+      context.message,
+      warn(
+        "Command off",
+        `**${safe(context.prefix)} ${safe(command)}** is off for this server.\n-# A manager can turn it on from the dashboard.`,
+      ),
+    )
+    return
+  }
+  await target.execute({ ...context, args })
 }
 
 function uptime(ms: number): string {

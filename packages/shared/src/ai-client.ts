@@ -2,7 +2,17 @@ import type { AiProvider } from "./ai"
 
 export type AiTurn = { role: "user" | "assistant"; content: string }
 export type AiFailure = "key" | "quota" | "model" | "failed"
-export type AiAnswer = { ok: true; text: string } | { ok: false; reason: AiFailure }
+export type AiAnswer = { ok: true; text: string; action?: AiAction } | { ok: false; reason: AiFailure }
+export type AiAction = { name: string; args: Record<string, unknown> }
+export type AiTool = {
+  name: string
+  description: string
+  parameters: {
+    type: "object"
+    properties: Record<string, { type: "string" | "boolean"; description: string }>
+    required?: string[]
+  }
+}
 export type AiModels = { ok: true; models: string[] } | { ok: false; reason: AiFailure }
 
 const OPENAI_STYLE: Partial<Record<AiProvider, string>> = {
@@ -64,7 +74,18 @@ export async function askAi(input: {
   timeoutMs: number
   reasoning: boolean
   temperature?: number
+  tools?: AiTool[]
 }): Promise<AiAnswer> {
+  const model = `${input.provider}|${input.model}`
+  const tools = input.tools?.length && !refusesTools.has(model) ? input.tools : undefined
+  const first = await askVariants({ ...input, tools })
+  if (!tools || first.ok || first.reason !== "model") return first
+  const bare = await askVariants({ ...input, tools: undefined })
+  if (bare.ok) refusesTools.add(model)
+  return bare
+}
+
+async function askVariants(input: AskInput): Promise<AiAnswer> {
   const variants = reasoningVariants(input.provider, input.reasoning)
   const model = `${input.provider}|${input.model}`
   const memo = `${model}|${input.reasoning ? "on" : "off"}`
@@ -97,6 +118,7 @@ type AskInput = {
   timeoutMs: number
   reasoning: boolean
   temperature?: number
+  tools?: AiTool[]
 }
 
 type Variant = { params: Record<string, unknown>; thinks: boolean }
@@ -104,6 +126,7 @@ type Variant = { params: Record<string, unknown>; thinks: boolean }
 const THINKING_ROOM = 3000
 const workingVariant = new Map<string, number>()
 const refusesTemperature = new Set<string>()
+const refusesTools = new Set<string>()
 
 function reasoningVariants(provider: AiProvider, reasoning: boolean): Variant[] {
   const plain = { params: {}, thinks: true }
@@ -137,7 +160,7 @@ function reasoningVariants(provider: AiProvider, reasoning: boolean): Variant[] 
 }
 
 async function askOnce(input: AskInput, variant: Variant): Promise<AiAnswer> {
-  const { provider, key, model, system, turns, timeoutMs } = input
+  const { provider, key, model, system, turns, timeoutMs, tools } = input
   const maxTokens = variant.thinks ? input.maxTokens + THINKING_ROOM : input.maxTokens
   const temperature = !variant.thinks && input.temperature !== undefined ? { temperature: input.temperature } : {}
   try {
@@ -147,23 +170,45 @@ async function askOnce(input: AskInput, variant: Variant): Promise<AiAnswer> {
         max_tokens: maxTokens,
         system,
         messages: turns,
+        ...(tools ? { tools: tools.map((tool) => ({ name: tool.name, description: tool.description, input_schema: tool.parameters })) } : {}),
         ...temperature,
         ...variant.params,
       })
       if (!body.ok) return body
-      const parts = (record(body.json).content as unknown[] | undefined) ?? []
-      return answer(parts.map((part) => (record(part).type === "text" ? String(record(part).text ?? "") : "")).join(""))
+      const parts = ((record(body.json).content as unknown[] | undefined) ?? []).map(record)
+      const used = parts.find((part) => part.type === "tool_use")
+      return answer(
+        parts.map((part) => (part.type === "text" ? String(part.text ?? "") : "")).join(""),
+        used ? action(used.name, used.input) : undefined,
+      )
     }
     if (provider === "gemini") {
       const body = await call(`${GEMINI}/models/${encodeURIComponent(model)}:generateContent`, { "x-goog-api-key": key }, timeoutMs, {
         systemInstruction: { parts: [{ text: system }] },
         contents: turns.map((turn) => ({ role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.content }] })),
+        ...(tools
+          ? {
+              tools: [
+                {
+                  functionDeclarations: tools.map((tool) => ({
+                    name: tool.name,
+                    description: tool.description,
+                    ...(Object.keys(tool.parameters.properties).length ? { parameters: tool.parameters } : {}),
+                  })),
+                },
+              ],
+            }
+          : {}),
         generationConfig: { maxOutputTokens: maxTokens, ...temperature, ...variant.params },
       })
       if (!body.ok) return body
       const candidate = record(((record(body.json).candidates as unknown[] | undefined) ?? [])[0])
-      const parts = (record(candidate.content).parts as unknown[] | undefined) ?? []
-      return answer(parts.map((part) => (record(part).thought ? "" : String(record(part).text ?? ""))).join(""))
+      const parts = ((record(candidate.content).parts as unknown[] | undefined) ?? []).map(record)
+      const used = parts.map((part) => record(part.functionCall)).find((called) => typeof called.name === "string")
+      return answer(
+        parts.map((part) => (part.thought ? "" : String(part.text ?? ""))).join(""),
+        used ? action(used.name, used.args) : undefined,
+      )
     }
     const base = OPENAI_STYLE[provider]
     if (!base) return { ok: false, reason: "failed" }
@@ -171,12 +216,14 @@ async function askOnce(input: AskInput, variant: Variant): Promise<AiAnswer> {
       model,
       messages: [{ role: "system", content: system }, ...turns],
       ...(provider === "openai" ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
+      ...(tools ? { tools: tools.map((tool) => ({ type: "function", function: tool })) } : {}),
       ...temperature,
       ...variant.params,
     })
     if (!body.ok) return body
-    const choice = record(((record(body.json).choices as unknown[] | undefined) ?? [])[0])
-    return answer(String(record(choice.message).content ?? ""))
+    const message = record(record(((record(body.json).choices as unknown[] | undefined) ?? [])[0]).message)
+    const called = record(record(((message.tool_calls as unknown[] | undefined) ?? [])[0]).function)
+    return answer(String(message.content ?? ""), typeof called.name === "string" ? action(called.name, parseArgs(called.arguments)) : undefined)
   } catch {
     return { ok: false, reason: "failed" }
   }
@@ -220,9 +267,23 @@ function failure(status: number): AiFailure {
   return "failed"
 }
 
-function answer(text: string): AiAnswer {
+function answer(text: string, used?: AiAction): AiAnswer {
   const trimmed = text.trim()
+  if (used) return { ok: true, text: trimmed, action: used }
   return trimmed ? { ok: true, text: trimmed } : { ok: false, reason: "failed" }
+}
+
+function action(name: unknown, args: unknown): AiAction | undefined {
+  return typeof name === "string" ? { name, args: record(args) } : undefined
+}
+
+function parseArgs(raw: unknown): unknown {
+  if (typeof raw !== "string") return raw
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
 }
 
 function bearer(key: string): Record<string, string> {

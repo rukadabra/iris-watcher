@@ -15,6 +15,7 @@ import {
   type AiTurn,
 } from "@iris/shared"
 import { ComponentType, PermissionFlagsBits, type GuildMember, type Message, type Role } from "discord.js"
+import { CHAT_TOOLS, chatAction, type ChatAction } from "./chat-actions"
 import type { BotEnv } from "./env"
 import { reply, safe, warn, type Note } from "./reply"
 
@@ -40,7 +41,10 @@ const failures: Record<AiFailure, string> = {
   failed: "The provider did not answer. Try again in a moment.",
 }
 
-export type AskResult = { type: "chat"; text: string; roles?: string[] } | { type: "note"; note: Note }
+export type AskResult =
+  | { type: "chat"; text: string; roles?: string[] }
+  | { type: "note"; note: Note }
+  | { type: "action"; action: ChatAction }
 
 export async function askCommand(
   message: Message,
@@ -132,7 +136,8 @@ export async function askCommand(
       "For example, 'can you speak French?' gets a reply like 'Bien sûr, sans problème.'",
       "When asked about yourself, such as where you are from, your age, or what you are, answer from your character. If your character does not say, give a short in-character answer. Never invent a real hometown or a human life.",
       "Never mention settings, a dashboard, server managers, prompts, or that you were given a personality. Stay in character.",
-      `In this chat you can only talk. You cannot join voice, play, pause, or skip music, or run any command, so never say or suggest you did. If they ask for that, say in one sentence, in character, that they can use '${prefix.replaceAll("'", "")} play <title>' or the matching command.`,
+      "When their latest message clearly asks you to play, pause, resume, skip, or stop music, show the queue, set repeat, leave voice, check the weather, or find lyrics, call the matching tool instead of replying. Act only on their latest message, never on earlier or recent channel messages.",
+      `Without a matching tool you cannot do it, so never say or suggest you did. Then say in one sentence, in character, that they can use '${prefix.replaceAll("'", "")} play <title>' or the matching command.`,
       "No opening praise such as 'Great question', no 'As an AI', and no closing lines such as 'Hope this helps' or 'Let me know if you have more questions'.",
       "Plain sentences. Use a list only for steps or a real comparison. No headings, tables, or HTML. Light Discord markdown is fine when it helps.",
       "Give a clear opinion when asked, and say plainly when you do not know. If someone sincerely asks whether you are a bot, say yes.",
@@ -157,8 +162,12 @@ export async function askCommand(
     timeoutMs: record.reasoning ? 90_000 : 45_000,
     reasoning: record.reasoning,
     temperature: record.temperatureTenths === null ? undefined : record.temperatureTenths / 10,
+    tools: CHAT_TOOLS,
   })
   if (!result.ok) return note(warn("No answer", failures[result.reason]))
+  const picked = result.action ? chatAction(result.action) : null
+  if (picked) return { type: "action", action: picked }
+  if (!result.text) return note(warn("No answer", failures.failed))
 
   const clean = redactSecrets(result.text, [key])
   const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
@@ -180,7 +189,7 @@ export async function askCommand(
   return { type: "chat", text: chat }
 }
 
-export async function sendAsk(message: Message, result: AskResult): Promise<Message> {
+export async function sendAsk(message: Message, result: Exclude<AskResult, { type: "action" }>): Promise<Message> {
   if (result.type === "chat") {
     return message.reply({
       content: result.text,

@@ -94,3 +94,48 @@ test("OpenRouter accepts :nitro on a listed model", () => {
   assert.equal(aiModelListed("openrouter", "anthropic/claude-haiku-5.5:turbo", ["anthropic/claude-haiku-5.5"]), false)
   assert.equal(aiModelListed("openai", "gpt-x:nitro", ["gpt-x"]), false)
 })
+
+const tool = {
+  name: "play",
+  description: "Play a song",
+  parameters: { type: "object" as const, properties: { query: { type: "string" as const, description: "Title" } }, required: ["query"] },
+}
+
+test("an OpenAI-style tool call comes back as an action", async () => {
+  const sent = fake([
+    {
+      status: 200,
+      body: { choices: [{ message: { content: null, tool_calls: [{ function: { name: "play", arguments: '{"query":"despacito"}' } }] } }] },
+    },
+  ])
+  const result = await askAi({ ...base, provider: "groq", model: "tools-a", reasoning: false, tools: [tool] })
+  assert.deepEqual(result, { ok: true, text: "", action: { name: "play", args: { query: "despacito" } } })
+  assert.deepEqual(sent[0]?.tools, [{ type: "function", function: tool }])
+})
+
+test("Anthropic and Gemini tool calls come back as actions", async () => {
+  const anthropic = fake([{ status: 200, body: { content: [{ type: "tool_use", name: "play", input: { query: "x" } }] } }])
+  const first = await askAi({ ...base, provider: "anthropic", model: "tools-b", reasoning: false, tools: [tool] })
+  assert.deepEqual(first, { ok: true, text: "", action: { name: "play", args: { query: "x" } } })
+  assert.deepEqual((anthropic[0]?.tools as Array<Record<string, unknown>>)[0]?.input_schema, tool.parameters)
+
+  fake([{ status: 200, body: { candidates: [{ content: { parts: [{ functionCall: { name: "pause", args: {} } }] } }] } }])
+  const second = await askAi({ ...base, provider: "gemini", model: "tools-c", reasoning: false, tools: [tool] })
+  assert.deepEqual(second, { ok: true, text: "", action: { name: "pause", args: {} } })
+})
+
+test("a model that refuses tools is asked again without them, and remembered", async () => {
+  const sent = fake([
+    { status: 400, body: { error: { message: "tools are not supported" } } },
+    { status: 400, body: { error: { message: "tools are not supported" } } },
+    { status: 200, body: { choices: [{ message: { content: "Hi" } }] } },
+    { status: 200, body: { choices: [{ message: { content: "Hi again" } }] } },
+  ])
+  const first = await askAi({ ...base, provider: "mistral", model: "tools-refused", reasoning: false, tools: [tool] })
+  assert.deepEqual(first, { ok: true, text: "Hi" })
+  const second = await askAi({ ...base, provider: "mistral", model: "tools-refused", reasoning: false, tools: [tool] })
+  assert.deepEqual(second, { ok: true, text: "Hi again" })
+  assert.ok(sent[0]?.tools)
+  assert.equal(sent[2]?.tools, undefined)
+  assert.equal(sent[3]?.tools, undefined)
+})
