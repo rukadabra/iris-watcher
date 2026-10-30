@@ -56,7 +56,7 @@ export async function askCommand(
   }
   const text =
     spoken ||
-    "(They only tagged you with no text. Reply with one short sentence, like someone who was just pinged in chat, in the language this server usually uses. No opener such as 'Eh' and at most one question.)"
+    "(They only tagged you with no text. React the way your character would when poked for no reason, in one short sentence in the language this server usually uses. Make it different each time, never a plain 'what is it?'. No opener such as 'Eh' and at most one question.)"
   if (spoken.length > AI_QUESTION_MAX) return note(warn("Too long", `Keep it under ${AI_QUESTION_MAX} characters.`))
   if (hasSecretLike(spoken)) {
     return note(
