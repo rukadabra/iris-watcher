@@ -81,7 +81,12 @@ export {
 } from "./welcome"
 export {
   AI_PROVIDERS,
+  AI_PERSONA_MAX,
   AI_QUESTION_MAX,
+  parseAiPersona,
+  parseAiTemperature,
+  aiTemperature,
+  type AiTemperatureGuide,
   aiKeyContext,
   aiKeyHint,
   aiProviders,

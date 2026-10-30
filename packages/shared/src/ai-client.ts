@@ -63,13 +63,22 @@ export async function askAi(input: {
   maxTokens: number
   timeoutMs: number
   reasoning: boolean
+  temperature?: number
 }): Promise<AiAnswer> {
   const variants = reasoningVariants(input.provider, input.reasoning)
-  const memo = `${input.provider}|${input.model}|${input.reasoning ? "on" : "off"}`
+  const model = `${input.provider}|${input.model}`
+  const memo = `${model}|${input.reasoning ? "on" : "off"}`
   const start = Math.min(workingVariant.get(memo) ?? 0, variants.length - 1)
+  const plain = { ...input, temperature: undefined }
+  const tuned = input.temperature !== undefined && !refusesTemperature.has(model) ? input : plain
   let last: AiAnswer = { ok: false, reason: "failed" }
   for (let index = start; index < variants.length; index += 1) {
-    last = await askOnce(input, variants[index] as Variant)
+    const variant = variants[index] as Variant
+    last = await askOnce(tuned, variant)
+    if (!last.ok && last.reason === "model" && tuned !== plain && !variant.thinks) {
+      last = await askOnce(plain, variant)
+      if (last.ok) refusesTemperature.add(model)
+    }
     if (last.ok || last.reason !== "model") {
       if (last.ok) workingVariant.set(memo, index)
       return last
@@ -78,10 +87,23 @@ export async function askAi(input: {
   return last
 }
 
+type AskInput = {
+  provider: AiProvider
+  key: string
+  model: string
+  system: string
+  turns: AiTurn[]
+  maxTokens: number
+  timeoutMs: number
+  reasoning: boolean
+  temperature?: number
+}
+
 type Variant = { params: Record<string, unknown>; thinks: boolean }
 
 const THINKING_ROOM = 3000
 const workingVariant = new Map<string, number>()
+const refusesTemperature = new Set<string>()
 
 function reasoningVariants(provider: AiProvider, reasoning: boolean): Variant[] {
   const plain = { params: {}, thinks: true }
@@ -114,12 +136,10 @@ function reasoningVariants(provider: AiProvider, reasoning: boolean): Variant[] 
   }
 }
 
-async function askOnce(
-  input: { provider: AiProvider; key: string; model: string; system: string; turns: AiTurn[]; maxTokens: number; timeoutMs: number },
-  variant: Variant,
-): Promise<AiAnswer> {
+async function askOnce(input: AskInput, variant: Variant): Promise<AiAnswer> {
   const { provider, key, model, system, turns, timeoutMs } = input
   const maxTokens = variant.thinks ? input.maxTokens + THINKING_ROOM : input.maxTokens
+  const temperature = !variant.thinks && input.temperature !== undefined ? { temperature: input.temperature } : {}
   try {
     if (provider === "anthropic") {
       const body = await call(`${ANTHROPIC}/messages`, anthropicHeaders(key), timeoutMs, {
@@ -127,6 +147,7 @@ async function askOnce(
         max_tokens: maxTokens,
         system,
         messages: turns,
+        ...temperature,
         ...variant.params,
       })
       if (!body.ok) return body
@@ -137,7 +158,7 @@ async function askOnce(
       const body = await call(`${GEMINI}/models/${encodeURIComponent(model)}:generateContent`, { "x-goog-api-key": key }, timeoutMs, {
         systemInstruction: { parts: [{ text: system }] },
         contents: turns.map((turn) => ({ role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.content }] })),
-        generationConfig: { maxOutputTokens: maxTokens, ...variant.params },
+        generationConfig: { maxOutputTokens: maxTokens, ...temperature, ...variant.params },
       })
       if (!body.ok) return body
       const candidate = record(((record(body.json).candidates as unknown[] | undefined) ?? [])[0])
@@ -150,6 +171,7 @@ async function askOnce(
       model,
       messages: [{ role: "system", content: system }, ...turns],
       ...(provider === "openai" ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
+      ...temperature,
       ...variant.params,
     })
     if (!body.ok) return body

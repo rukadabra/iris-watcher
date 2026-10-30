@@ -45,5 +45,7 @@ export const guildAi = pgTable("guild_ai", {
   keySealed: text("key_sealed").notNull(),
   keyHint: text("key_hint").notNull(),
   reasoning: boolean("reasoning").notNull().default(false),
+  persona: text("persona").notNull().default(""),
+  temperatureTenths: smallint("temperature_tenths"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })

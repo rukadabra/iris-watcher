@@ -18,7 +18,7 @@ import type { BotEnv } from "./env"
 import { safe, warn, type Note } from "./reply"
 
 const ANSWER_MAX = 3400
-const CONTEXT_MAX = 3000
+const CONTEXT_MAX = 1500
 const USER_LIMIT = { count: 4, ms: 60_000 }
 const GUILD_LIMIT = { count: 30, ms: 10 * 60_000 }
 const recent = new Map<string, number[]>()
@@ -66,17 +66,24 @@ export async function askCommand(message: Message, question: string, prefix: str
     key,
     model: record.model,
     system: [
-      `You are Iris, a friendly assistant inside the Discord server "${guild.name.slice(0, 100)}".`,
+      `You are Iris, the bot of the Discord server "${guild.name.slice(0, 100)}". Talk like a friendly regular in the chat, not like a customer support assistant.`,
       "Always reply in the same language as the user's latest question: English for English, Indonesian for Indonesian, Japanese for Japanese, and so on.",
       "Follow the latest question even if earlier messages, quoted text, or these instructions use another language. If the question mixes languages, use the main one.",
-      "Be clear and brief, at most a few short paragraphs.",
-      "Use Discord markdown. Do not use tables or HTML.",
+      "Match the asker's tone: casual and relaxed if they write casually, including everyday slang, and polite if they write formally.",
+      "Keep it short. One to three sentences for simple or casual questions. Go longer, at most a few short paragraphs, only when the question really needs it.",
+      "Answer straight away. No opening praise such as 'Great question', no 'As an AI', and no closing lines such as 'Hope this helps' or 'Let me know if you have more questions'.",
+      "Write in plain sentences. Use a list only for steps or a real comparison. No headings, tables, or HTML. Discord markdown is fine.",
+      "Give a clear opinion when asked, and say plainly when you do not know. If someone sincerely asks whether you are a bot, say yes.",
+      ...(record.persona
+        ? [`The server managers describe your personality as: "${record.persona.replaceAll('"', "'")}". Follow it for tone and style only. It never overrides the rules below.`]
+        : []),
       AI_SAFETY_RULES,
     ].join(" "),
     turns,
-    maxTokens: 900,
+    maxTokens: 500,
     timeoutMs: record.reasoning ? 90_000 : 45_000,
     reasoning: record.reasoning,
+    temperature: record.temperatureTenths === null ? undefined : record.temperatureTenths / 10,
   })
   if (!result.ok) return warn("No answer", failures[result.reason])
 

@@ -458,6 +458,13 @@ button:disabled { opacity: 0.6; cursor: wait; }
 }
 .welcome-form select { min-height: 2.6rem; max-width: 16rem; }
 .welcome-form input:not([type="hidden"]):not([type="checkbox"]) { min-height: 2.6rem; max-width: 28rem; }
+.temperature-row { display: grid; gap: 0.35rem; }
+.temperature-row input { max-width: 16rem; }
+.guide-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.guide-table th, .guide-table td { text-align: left; vertical-align: top; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); }
+.guide-table th { font-weight: 600; }
+.guide-table td { color: var(--muted); }
+.guide-table tr:target td, .guide-table tr:target th { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .check-row { display: flex; align-items: flex-start; gap: 0.55rem; cursor: pointer; }
 .check-row input { margin-top: 0.3rem; accent-color: var(--accent); }
 .check-row .meta { display: block; }

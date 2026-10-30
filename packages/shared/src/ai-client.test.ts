@@ -52,6 +52,36 @@ test("a rejected setting falls back once, then the working one is remembered", a
   assert.deepEqual(config(sent[2]), { thinkingLevel: "low" })
 })
 
+test("a refused temperature is dropped without turning thinking on", async () => {
+  const sent = fake([
+    { status: 400, body: { error: { message: "temperature is not supported for this model" } } },
+    { status: 200, body: { content: [{ type: "text", text: "Hi" }] } },
+    { status: 200, body: { content: [{ type: "text", text: "Hi again" }] } },
+  ])
+  const ask = { ...base, provider: "anthropic" as const, model: "claude-temperature-test", reasoning: false, temperature: 0.7 }
+  assert.deepEqual(await askAi(ask), { ok: true, text: "Hi" })
+  assert.deepEqual(await askAi(ask), { ok: true, text: "Hi again" })
+  assert.equal(sent.length, 3)
+  assert.equal(sent[0]?.temperature, 0.7)
+  assert.deepEqual(sent[0]?.thinking, { type: "disabled" })
+  assert.equal(sent[1]?.temperature, undefined)
+  assert.deepEqual(sent[1]?.thinking, { type: "disabled" })
+  assert.equal(sent[2]?.temperature, undefined)
+})
+
+test("a temperature is not sent while the model thinks", async () => {
+  const sent = fake([{ status: 200, body: { choices: [{ message: { content: "Hi" } }] } }])
+  await askAi({ ...base, provider: "openai", model: "gpt-think-test", reasoning: true, temperature: 0.4 })
+  assert.equal(sent[0]?.temperature, undefined)
+  assert.equal(sent[0]?.reasoning_effort, "medium")
+})
+
+test("an accepted temperature reaches the provider", async () => {
+  const sent = fake([{ status: 200, body: geminiOk }])
+  await askAi({ ...base, provider: "gemini", model: "gemini-temperature-test", reasoning: false, temperature: 1.2 })
+  assert.equal((sent[0]?.generationConfig as Record<string, unknown>).temperature, 1.2)
+})
+
 test("a rejected key stops without trying other settings", async () => {
   const sent = fake([{ status: 401, body: {} }])
   const result = await askAi({ ...base, provider: "openai", model: "gpt-x", reasoning: false })
