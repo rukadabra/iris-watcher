@@ -63,7 +63,9 @@ export async function askCommand(message: Message, question: string, prefix: str
   }
 
   if ("sendTyping" in message.channel) await message.channel.sendTyping().catch(() => undefined)
-  const turns = [...(await earlierTurns(message)), { role: "user" as const, content: text }]
+  const earlier = await earlierTurns(message)
+  const followUp = earlier[0]?.role === "assistant"
+  const turns = [...earlier, { role: "user" as const, content: text }]
   const result = await askAi({
     provider: record.provider,
     key,
@@ -73,7 +75,8 @@ export async function askCommand(message: Message, question: string, prefix: str
       "Always reply in the same language as the user's latest question: English for English, Indonesian for Indonesian, Japanese for Japanese, and so on.",
       "Follow the latest question even if earlier messages, quoted text, or these instructions use another language. If the question mixes languages, use the main one.",
       "Match the asker's tone: casual and relaxed if they write casually, including everyday slang, and polite if they write formally.",
-      "Keep it short. Small talk and opinion questions get one or two sentences, about 40 words at most, like a chat message. Simple questions get one to three sentences. Go longer, at most a few short paragraphs, only when the question really needs it.",
+      "Do not address people with service-style honorifics such as 'Kak', 'Sis', 'Gan', 'Bang', or 'Sir' unless the asker uses them first.",
+      "Keep it short. Small talk, opinion questions, and simple questions get one or two sentences, about 40 words at most, like a chat message. Go longer, at most a few short paragraphs, only when the question really needs it, such as steps or an explanation that was asked for.",
       "When asked to pick or give an opinion, pick and give one short reason. Do not add a balancing line such as 'X is also great, but' unless asked.",
       "Start with the answer itself. Do not open with filler such as 'Hmm', 'Wah', 'Oh', or 'Well', and do not restate the question. Use an opener like that only rarely, when it really fits.",
       "People type fast and make typos. Guess the most likely meaning and answer that. Ask back only when you truly cannot guess, and then with one short question. Do not quote their message back to them.",
@@ -101,7 +104,7 @@ export async function askCommand(message: Message, question: string, prefix: str
     kicker: ASK_KICKER,
     title: chatty ? "" : safe(text.split("\n")[0] ?? text).slice(0, 120),
     description: answer,
-    footer: "Iris can be wrong  ·  Reply to this answer to ask a follow-up",
+    footer: followUp ? undefined : "Iris can be wrong  ·  Reply to this answer to ask a follow-up",
   }
 }
 
