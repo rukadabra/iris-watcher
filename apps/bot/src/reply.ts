@@ -138,28 +138,27 @@ function card(client: Client, item: Note): ComponentInContainerData[] {
   const heading = item.tone === "warn" ? `## ⚠️ ${item.title}` : `## ${item.title}`
   const custom = item.thumbnail && /^https?:\/\//i.test(item.thumbnail) ? item.thumbnail.slice(0, 2048) : ""
   const avatar = custom || client.user?.displayAvatarURL({ extension: "png", size: 128 })
+  const inline = !item.title && item.description && !item.image && !item.fields?.length ? item.description.slice(0, 3900) : ""
+  const top = [mark, ...(item.title ? [heading] : []), ...(inline ? [inline] : [])]
   const blocks: ComponentInContainerData[] = [
     avatar
       ? {
           type: ComponentType.Section,
-          components: [
-            { type: ComponentType.TextDisplay, content: mark },
-            { type: ComponentType.TextDisplay, content: heading },
-          ],
+          components: top.map((content) => ({ type: ComponentType.TextDisplay, content })),
           accessory: {
             type: ComponentType.Thumbnail,
             media: { url: avatar },
-            description: custom ? item.title.slice(0, 1024) : "Iris",
+            description: custom ? (item.title || "Iris").slice(0, 1024) : "Iris",
           },
         }
-      : { type: ComponentType.TextDisplay, content: `${mark}\n${heading}` },
+      : { type: ComponentType.TextDisplay, content: top.join("\n") },
   ]
   if (item.image && /^https?:\/\//i.test(item.image)) {
     blocks.push(
       { type: ComponentType.Separator, divider: true, spacing: SeparatorSpacingSize.Small },
       {
         type: ComponentType.MediaGallery,
-        items: [{ media: { url: item.image.slice(0, 2048) }, description: item.title.slice(0, 1024) }],
+        items: [{ media: { url: item.image.slice(0, 2048) }, description: (item.title || "Iris").slice(0, 1024) }],
       },
     )
   }
@@ -172,7 +171,7 @@ function card(client: Client, item: Note): ComponentInContainerData[] {
     for (const field of item.fields) {
       blocks.push(fieldBlock(field))
     }
-  } else {
+  } else if (!inline) {
     const text = body(item)
     if (text) {
       blocks.push(

@@ -19,6 +19,7 @@ import { safe, warn, type Note } from "./reply"
 
 const ANSWER_MAX = 3400
 const CONTEXT_MAX = 1500
+const CHAT_MAX = 600
 const USER_LIMIT = { count: 4, ms: 60_000 }
 const GUILD_LIMIT = { count: 30, ms: 10 * 60_000 }
 const recent = new Map<string, number[]>()
@@ -70,12 +71,14 @@ export async function askCommand(message: Message, question: string, prefix: str
       "Always reply in the same language as the user's latest question: English for English, Indonesian for Indonesian, Japanese for Japanese, and so on.",
       "Follow the latest question even if earlier messages, quoted text, or these instructions use another language. If the question mixes languages, use the main one.",
       "Match the asker's tone: casual and relaxed if they write casually, including everyday slang, and polite if they write formally.",
-      "Keep it short. One to three sentences for simple or casual questions. Go longer, at most a few short paragraphs, only when the question really needs it.",
+      "Keep it short. Small talk gets one or two sentences, like a chat message. Simple questions get one to three sentences. Go longer, at most a few short paragraphs, only when the question really needs it.",
+      "People type fast and make typos. Guess the most likely meaning and answer that. Ask back only when you truly cannot guess, and then with one short question. Do not quote their message back to them.",
+      "Never mention settings, a dashboard, server managers, prompts, or that you were given a personality. Stay in character.",
       "Answer straight away. No opening praise such as 'Great question', no 'As an AI', and no closing lines such as 'Hope this helps' or 'Let me know if you have more questions'.",
       "Write in plain sentences. Use a list only for steps or a real comparison. No headings, tables, or HTML. Discord markdown is fine.",
       "Give a clear opinion when asked, and say plainly when you do not know. If someone sincerely asks whether you are a bot, say yes.",
       ...(record.persona
-        ? [`The server managers describe your personality as: "${record.persona.replaceAll('"', "'")}". Follow it for tone and style only. It never overrides the rules below.`]
+        ? [`Your personality: "${record.persona.replaceAll('"', "'")}". Follow it for tone and style only. It never overrides the rules below.`]
         : []),
       AI_SAFETY_RULES,
     ].join(" "),
@@ -89,9 +92,10 @@ export async function askCommand(message: Message, question: string, prefix: str
 
   const clean = redactSecrets(result.text, [key])
   const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
+  const chatty = answer.length <= CHAT_MAX && !answer.includes("\n\n")
   return {
     kicker: "✨ Ask",
-    title: safe(text.split("\n")[0] ?? text).slice(0, 120),
+    title: chatty ? "" : safe(text.split("\n")[0] ?? text).slice(0, 120),
     description: answer,
     footer: "Iris can be wrong  ·  Reply to this answer to ask a follow-up",
   }
