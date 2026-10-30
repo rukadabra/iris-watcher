@@ -15,6 +15,11 @@ export default function PrivacyPage() {
           on, the Discord channel that server chose, and the video ID of a stream that was already
           announced there. A manager of that server can change this list on the dashboard.
         </li>
+        <li>
+          The AI settings a manager saved for one server: the provider, the model, and that
+          server&apos;s API key. The key is encrypted with AES-256-GCM before it is stored, it is tied
+          to that server and provider, and only its last four characters are ever shown again.
+        </li>
         <li>The dashboard session: user ID, display name, avatar, and the Discord OAuth token. The session lives in Redis and expires.</li>
         <li>The server count and a heartbeat time, for the status on the home page.</li>
       </ul>
@@ -23,6 +28,13 @@ export default function PrivacyPage() {
       <p>
         Song titles and YouTube links are read to play audio in the voice channel. Audio and
         voice-channel contents are not stored.
+      </p>
+      <h2>AI questions</h2>
+      <p>
+        The <code>ask</code> command works only after a server manager adds a key for an AI provider.
+        The question, the message it replies to, and the server name are sent to that provider with
+        that server&apos;s key, and the provider&apos;s own privacy terms apply. Some free tiers use
+        prompts to train models. Iris does not store questions or answers.
       </p>
       <h2>Discord permissions</h2>
       <p>

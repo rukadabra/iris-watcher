@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./ai": "./src/ai.ts",
     "./banner": "./src/banner.ts",
     "./welcome": "./src/welcome.ts"
   },

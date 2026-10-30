@@ -44,6 +44,8 @@ services:
       HEALTH_PORT: 8080
       PLAYER_URL: ${PLAYER_URL:-}
       PLAYER_TOKEN: ${PLAYER_TOKEN:-}
+      AI_KEY_SECRET: ${AI_KEY_SECRET:-}
+      AI_KEY_SECRET_PREVIOUS: ${AI_KEY_SECRET_PREVIOUS:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +75,8 @@ services:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       PLAYER_URL: ${PLAYER_URL:-}
       PLAYER_TOKEN: ${PLAYER_TOKEN:-}
+      AI_KEY_SECRET: ${AI_KEY_SECRET:-}
+      AI_KEY_SECRET_PREVIOUS: ${AI_KEY_SECRET_PREVIOUS:-}
       DATABASE_URL: postgresql://iris:${POSTGRES_PASSWORD:-iris}@postgres:5432/iris
       REDIS_URL: redis://redis:6379
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}

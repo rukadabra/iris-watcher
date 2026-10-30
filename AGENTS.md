@@ -15,7 +15,7 @@ This document is for a Cursor agent opening the same repo on another machine. Do
 ## Repo layout
 
 - `apps/bot` — discord.js 14.27.0, one Gateway connection, voice, and health inside the process.
-- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the live-alert list, the welcome and boost banners, and which commands are on for that server. `output: "standalone"`.
+- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the live-alert list, the welcome and boost banners, the AI provider and key, and which commands are on for that server. `output: "standalone"`.
 - `apps/player` — reads YouTube with `yt-dlp` and streams PCM through ffmpeg. It does not hold a Discord token.
 - `packages/shared` — prefix, command list, bot invite URL, and the YouTube link parser.
 - `packages/db` — Postgres, table `guilds`.
@@ -54,7 +54,7 @@ For live alerts, the player also accepts a validated channel target on `POST /ch
 - `queue` shows 8 songs per page. `queue next` or the page buttons open the next page.
 - A video link that also carries `list=PL...` is treated as one video. A mix `list=RD...` is ignored because the follow-on queue is fetched separately.
 
-Commands, with the default prefix. The site, the dashboard, and `help` use four groups: General, Music, Live alerts, Lookups.
+Commands, with the default prefix. The site, the dashboard, and `help` use five groups: General, Music, Live alerts, Lookups, AI.
 
 General:
 
@@ -99,6 +99,21 @@ Lookups:
 
 `lyrics` with no title uses the song playing in that server. `hn` with no query shows the front page. The other lookup commands do not use voice. The sources are LRCLIB, Open-Meteo, Wikipedia, Free Dictionary, Frankfurter, AniList, Open Trivia DB, Bing News, and Hacker News. No token.
 
+AI:
+
+- `!iris ask <question>`
+
+`ask` uses the API key of that one server, never a key that belongs to Iris. A manager (owner, Manage Server, or Administrator) chooses the provider, the model, and the key on the dashboard only. A key is never accepted through a Discord message, because chat is visible and kept. Providers: OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, DeepSeek, xAI. Each has a fixed HTTPS endpoint in `packages/shared/src/ai-client.ts`, and requests use `redirect: "error"`. Do not add a custom base URL: it would let a key be sent anywhere and turn the bot into a request proxy. Before saving, the web lists the provider's models with that key and rejects the key or the model if they do not check out. Replying to an answer of Iris sends that answer back as context, so a conversation can continue. Limits: 4 questions a minute per person, 30 every 10 minutes per server, a 1500-character question, and mentions are never pinged. Questions and answers are not stored.
+
+Key storage, in `packages/shared/src/secret-box.ts`:
+
+- AES-256-GCM, a random 12-byte IV for every save, a 16-byte tag.
+- The encryption key comes from HKDF-SHA256 over `AI_KEY_SECRET`, which must be exactly 32 random bytes in base64. A passphrase is rejected.
+- The ciphertext carries a key id and is bound to `ai-key:<guild id>:<provider>` as additional data, so it does not open for another server or provider.
+- Rows live in their own `guild_ai` table, so the usual guild queries never read ciphertext. The dashboard receives only the provider, the model, and the last four characters. A check constraint rejects anything that is not sealed.
+- Do not log a key, a request header, or a provider error body. Do not cache a decrypted key in Redis or memory.
+- Rotation: move the old value to `AI_KEY_SECRET_PREVIOUS` and set a new `AI_KEY_SECRET`. The bot re-encrypts an old key the next time it is used.
+
 The person who sends a music command must already be in a normal voice channel. The bot needs Connect and Speak in that channel. If nobody else is in that channel for one minute, Iris leaves on her own. Other bots are not counted.
 
 `live` does not use voice. The list and the destination channel belong to one Discord server, and are not mixed with another server. Who may change them: the server owner, Manage Server, or Administrator. `!iris live` with no link opens a text-channel dropdown. No alert is sent before that channel is chosen. `channel` opens the same dropdown. `list` shows that server's list. `remove` and `off` detach one YouTube channel from that server only. One server can have at most 50 channels. The same YouTube channel on several servers is checked once, then its card is sent to each server's destination channel.
@@ -123,7 +138,7 @@ Dashboard OAuth uses the scope `identify guilds`. Redirect: `${WEB_ORIGIN}/api/a
 
 Copy `.env.example` to `.env`. Do not commit `.env`.
 
-Keys used by the bot and the web: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `WEB_ORIGIN`, `DEFAULT_PREFIX`, `DATABASE_URL`, `REDIS_URL`, `HEALTH_PORT`, `PLAYER_URL`, `PLAYER_TOKEN`.
+Keys used by the bot and the web: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `WEB_ORIGIN`, `DEFAULT_PREFIX`, `DATABASE_URL`, `REDIS_URL`, `HEALTH_PORT`, `PLAYER_URL`, `PLAYER_TOKEN`, `AI_KEY_SECRET`, `AI_KEY_SECRET_PREVIOUS`. `AI_KEY_SECRET` must be the same for the bot and the web. Without it, `ask` stays off and the dashboard hides the key form. Changing it without moving the old value to `AI_KEY_SECRET_PREVIOUS` makes every saved key unreadable.
 
 Player keys: `PLAYER_TOKEN` (at least 16 characters, the same value the bot reads), `PLAYER_HOST`, `PLAYER_PORT`, `YTDLP_PATH`, `FFMPEG_PATH`.
 
@@ -153,7 +168,7 @@ The player binds to `127.0.0.1` so it is not open to the network.
 
 Dokploy uses `docker-compose.yml`. Attach the domain to the `web` service on port 3000. The services that start are `postgres`, `redis`, `bot`, and `web`. The bot and web use the Postgres and Redis in that same compose file.
 
-The bot has no public port. The web container is not published on a host port. One replica. Set `PLAYER_URL` and `PLAYER_TOKEN` in the bot environment.
+The bot has no public port. The web container is not published on a host port. One replica. Set `PLAYER_URL` and `PLAYER_TOKEN` in the bot environment. Set `AI_KEY_SECRET` in both the bot and the web.
 
 ## Checks
 

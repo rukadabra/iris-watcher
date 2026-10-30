@@ -3,6 +3,7 @@ export const commandGroups = [
   { id: "music", label: "Music" },
   { id: "live", label: "Live alerts" },
   { id: "lookups", label: "Lookups" },
+  { id: "ai", label: "AI" },
 ] as const
 
 export type CommandGroup = (typeof commandGroups)[number]["id"]
@@ -219,6 +220,14 @@ export const commandList = [
     summary: "Shows the Hacker News front page, or stories matching a search",
     usage: "hn [query]",
     examples: ["hn", "hn indonesia"],
+  },
+  {
+    name: "ask",
+    group: "ai",
+    emoji: "✨",
+    summary: "Asks the AI model this server chose on the dashboard. Reply to an answer to ask a follow-up",
+    usage: "ask <question>",
+    examples: ["ask why is the sky blue"],
   },
 ] as const satisfies ReadonlyArray<{
   name: string

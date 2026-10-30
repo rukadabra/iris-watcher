@@ -58,6 +58,21 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+CREATE TABLE IF NOT EXISTS guild_ai (
+  guild_id text PRIMARY KEY REFERENCES guilds(id) ON DELETE CASCADE,
+  provider text NOT NULL,
+  model text NOT NULL,
+  key_sealed text NOT NULL,
+  key_hint text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT guild_ai_provider_check CHECK (provider ~ '^[a-z]{2,20}$'),
+  CONSTRAINT guild_ai_model_check CHECK (char_length(model) BETWEEN 1 AND 120),
+  CONSTRAINT guild_ai_key_check CHECK (
+    key_sealed ~ '^v1\\.[A-Za-z0-9_-]{8}\\.[A-Za-z0-9_-]{16}\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{22}$'
+  ),
+  CONSTRAINT guild_ai_hint_check CHECK (char_length(key_hint) BETWEEN 1 AND 4)
+);
+
 DO $$ BEGIN
   ALTER TABLE guilds ADD CONSTRAINT guilds_boost_check CHECK (
     (boost_channel_id IS NULL OR boost_channel_id ~ '^[0-9]{5,22}$')

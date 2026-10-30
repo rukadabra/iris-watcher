@@ -2,8 +2,11 @@
 
 import {
   getGuild,
+  getGuildAiSecret,
   migrate,
+  removeGuildAi,
   removeLiveWatch,
+  saveGuildAi,
   saveLiveWatch,
   setDisabledCommands,
   setGuildLiveChannel,
@@ -12,25 +15,35 @@ import {
   setLiveWatchEnabled,
 } from "@iris/db"
 import {
+  aiKeyContext,
+  aiKeyHint,
+  aiProviders,
   canManageGuild,
   COMMANDS_CHANNEL,
   DEFAULT_PREFIX,
   guildCommandsKey,
   guildPrefixKey,
+  isAiProvider,
   isGreetingKind,
   isSnowflake,
   isToggleableCommand,
+  listAiModels,
   LIVE_REFRESH_CHANNEL,
+  openSecret,
+  parseAiKey,
+  parseAiModel,
   parseChannelTarget,
   parseCustomPrefix,
   parseWelcomeMessage,
   PREFIX_CHANNEL,
   sanitizeDisabledCommands,
+  sealSecret,
+  type AiFailure,
 } from "@iris/shared"
 import { revalidatePath } from "next/cache"
 import { fetchDiscordGuilds, fetchGuildTextChannels } from "@/lib/discord"
 import { resolveYoutubeChannel } from "@/lib/player"
-import { readWebEnv } from "@/lib/env"
+import { readAiKeys, readWebEnv } from "@/lib/env"
 import { connectRedis } from "@/lib/redis"
 import { getSession } from "@/lib/session"
 import type { PrefixActionState } from "@/lib/types"
@@ -162,6 +175,69 @@ export async function saveWelcome(
   } catch (error) {
     console.error(error)
     return { error: "The banner could not be saved", saved: false }
+  }
+
+  return done()
+}
+
+const aiFailures: Record<AiFailure, string> = {
+  key: "The provider rejected that key.",
+  quota: "The provider is rate limiting that key, or its credit ran out. Try again later.",
+  model: "The provider could not list models for that key.",
+  failed: "The provider could not be reached. Try again in a moment.",
+}
+
+export async function saveAi(_state: PrefixActionState, formData: FormData): Promise<PrefixActionState> {
+  const failed = (error: string): PrefixActionState => ({ error, saved: false })
+  const guildId = String(formData.get("guildId") ?? "")
+  const intent = String(formData.get("intent") ?? "save")
+  const ready = await prepare(guildId)
+  if (!ready.ok) return failed(ready.error)
+  const keys = readAiKeys()
+  if (!keys.ok || !keys.ring) return failed("AI keys are not set up on this Iris yet.")
+  const ring = keys.ring
+
+  try {
+    const guild = await getGuild(guildId)
+    if (!guild) return failed("Iris is not in this server")
+    if (intent === "remove") {
+      await removeGuildAi(guildId)
+      return done()
+    }
+    if (intent !== "save") return failed("That change is not valid")
+
+    const provider = String(formData.get("provider") ?? "")
+    if (!isAiProvider(provider)) return failed("Choose a provider")
+    const model = parseAiModel(String(formData.get("model") ?? ""))
+    if (!model.ok) return failed(model.error)
+    const context = aiKeyContext(guildId, provider)
+
+    let key: string
+    const typed = String(formData.get("key") ?? "")
+    if (typed.trim()) {
+      const parsed = parseAiKey(typed)
+      if (!parsed.ok) return failed(parsed.error)
+      key = parsed.key
+    } else {
+      const saved = await getGuildAiSecret(guildId)
+      const opened = saved?.provider === provider ? openSecret(ring, saved.keySealed, context) : null
+      if (!opened) return failed(`Paste a ${aiProviders[provider].label} key.`)
+      key = opened
+    }
+
+    const listed = await listAiModels(provider, key)
+    if (!listed.ok) return failed(aiFailures[listed.reason])
+    if (!listed.models.includes(model.model)) return failed(`${model.model} is not available for this key.`)
+
+    await saveGuildAi(guildId, {
+      provider,
+      model: model.model,
+      keySealed: sealSecret(ring, key, context),
+      keyHint: aiKeyHint(key),
+    })
+  } catch {
+    console.error(`The AI settings for ${guildId} could not be saved`)
+    return failed("The AI settings could not be saved")
   }
 
   return done()

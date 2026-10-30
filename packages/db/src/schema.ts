@@ -35,3 +35,14 @@ export const liveWatches = pgTable(
 )
 
 export type LiveWatch = typeof liveWatches.$inferSelect
+
+export const guildAi = pgTable("guild_ai", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  model: text("model").notNull(),
+  keySealed: text("key_sealed").notNull(),
+  keyHint: text("key_hint").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})

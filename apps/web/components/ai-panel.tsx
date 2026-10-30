@@ -1,0 +1,109 @@
+"use client"
+
+import { AI_PROVIDERS, aiProviders, isAiProvider, type AiProvider } from "@iris/shared/ai"
+import { useActionState, useState } from "react"
+import { saveAi } from "@/app/dashboard/actions"
+import type { PrefixActionState } from "@/lib/types"
+
+const initialState: PrefixActionState = { error: "", saved: false }
+
+export function AiPanel({
+  guildId,
+  ready,
+  saved,
+}: {
+  guildId: string
+  ready: boolean
+  saved: { provider: string; model: string; keyHint: string } | null
+}) {
+  const [state, action, pending] = useActionState(saveAi, initialState)
+  const start: AiProvider = saved && isAiProvider(saved.provider) ? saved.provider : "gemini"
+  const [provider, setProvider] = useState<AiProvider>(start)
+  const info = aiProviders[provider]
+  const keeps = saved?.provider === provider
+
+  return (
+    <section className="block" aria-label="AI">
+      <div className="block-head">
+        <h3>AI</h3>
+        <span className={saved ? "pill live" : "pill idle"}>
+          {saved && isAiProvider(saved.provider) ? `${aiProviders[saved.provider].label} · ${saved.model}` : "Off"}
+        </span>
+      </div>
+      <p className="meta">
+        Members ask with the <code>ask</code> command. This server brings its own API key, so usage and cost stay on that key.
+      </p>
+      {!ready ? (
+        <p className="meta">AI keys are not set up on this copy of Iris yet.</p>
+      ) : (
+        <form action={action} className="welcome-form">
+          <input type="hidden" name="guildId" value={guildId} />
+          <select
+            name="provider"
+            aria-label="AI provider"
+            value={provider}
+            onChange={(event) => isAiProvider(event.target.value) && setProvider(event.target.value)}
+          >
+            {AI_PROVIDERS.map((id) => (
+              <option key={id} value={id}>
+                {aiProviders[id].label}
+              </option>
+            ))}
+          </select>
+          <input
+            key={`model-${provider}`}
+            name="model"
+            aria-label="Model"
+            defaultValue={keeps ? saved.model : ""}
+            placeholder={info.example}
+            maxLength={120}
+            spellCheck={false}
+            autoComplete="off"
+            required
+          />
+          <input
+            key={`key-${provider}`}
+            name="key"
+            type="password"
+            aria-label={`${info.label} API key`}
+            placeholder={keeps ? `Saved key ends in ${saved.keyHint}. Leave empty to keep it` : `${info.label} API key`}
+            maxLength={400}
+            spellCheck={false}
+            autoComplete="new-password"
+            required={!keeps}
+          />
+          <p className="meta">
+            Get a key from{" "}
+            <a href={info.keyUrl} target="_blank" rel="noopener noreferrer">
+              {info.label}
+            </a>
+            . Iris checks the key and the model before saving, encrypts the key, and never shows it again. Questions are sent to{" "}
+            {info.label} with this key, and free tiers may use them to train models.
+          </p>
+          <div className="prefix-row">
+            <button type="submit" name="intent" value="save" disabled={pending}>
+              {saved ? "Save" : "Save and turn on"}
+            </button>
+            {saved ? (
+              <button
+                type="submit"
+                name="intent"
+                value="remove"
+                className="quiet"
+                disabled={pending}
+                formNoValidate
+                onClick={(event) => {
+                  if (!window.confirm("Remove this server's AI key?")) event.preventDefault()
+                }}
+              >
+                Remove key
+              </button>
+            ) : null}
+            {state.error ? <p className="form-error">{state.error}</p> : null}
+            {state.saved ? <p className="form-ok">AI settings saved.</p> : null}
+          </div>
+        </form>
+      )}
+    </section>
+  )
+}

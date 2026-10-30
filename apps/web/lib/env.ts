@@ -1,4 +1,4 @@
-import { customPrefixSchema, DEFAULT_PREFIX, definedEnv } from "@iris/shared"
+import { customPrefixSchema, DEFAULT_PREFIX, definedEnv, loadSecretRing, type SecretRingResult } from "@iris/shared"
 import { z } from "zod"
 
 const webEnvSchema = z.object({
@@ -30,4 +30,8 @@ export function readWebEnv(): { ok: true; env: WebEnv } | { ok: false; error: st
       WEB_ORIGIN: parsed.data.WEB_ORIGIN.replace(/\/$/, ""),
     },
   }
+}
+
+export function readAiKeys(): SecretRingResult {
+  return loadSecretRing(process.env.AI_KEY_SECRET, process.env.AI_KEY_SECRET_PREVIOUS)
 }

@@ -1,4 +1,4 @@
-import { customPrefixSchema, DEFAULT_PREFIX, definedEnv } from "@iris/shared"
+import { customPrefixSchema, DEFAULT_PREFIX, definedEnv, loadSecretRing, type SecretRing } from "@iris/shared"
 import { z } from "zod"
 
 const envSchema = z.object({
@@ -10,9 +10,14 @@ const envSchema = z.object({
   HEALTH_PORT: z.coerce.number().int().min(1).max(65535).default(8080),
   PLAYER_URL: z.string().min(1).optional(),
   PLAYER_TOKEN: z.string().min(16).optional(),
+  AI_KEY_SECRET: z.string().optional(),
+  AI_KEY_SECRET_PREVIOUS: z.string().optional(),
 })
 
-export type BotEnv = z.infer<typeof envSchema> & { WEB_ORIGIN: string }
+export type BotEnv = Omit<z.infer<typeof envSchema>, "AI_KEY_SECRET" | "AI_KEY_SECRET_PREVIOUS"> & {
+  WEB_ORIGIN: string
+  aiKeys: SecretRing | null
+}
 
 export function loadEnv(): BotEnv {
   const parsed = envSchema.safeParse(definedEnv())
@@ -26,9 +31,14 @@ export function loadEnv(): BotEnv {
     throw new Error("DEFAULT_PREFIX is not valid")
   }
 
+  const { AI_KEY_SECRET, AI_KEY_SECRET_PREVIOUS, ...rest } = parsed.data
+  const aiKeys = loadSecretRing(AI_KEY_SECRET, AI_KEY_SECRET_PREVIOUS)
+  if (!aiKeys.ok) throw new Error(aiKeys.error)
+
   return {
-    ...parsed.data,
+    ...rest,
     DEFAULT_PREFIX: prefix.data,
     WEB_ORIGIN: parsed.data.WEB_ORIGIN.replace(/\/$/, ""),
+    aiKeys: aiKeys.ring,
   }
 }

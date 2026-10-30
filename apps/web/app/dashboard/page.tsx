@@ -1,5 +1,6 @@
 import {
   guildGreeting,
+  listGuildAiByIds,
   migrate,
   listGuildsByIds,
   listLiveWatchesByGuildIds,
@@ -17,11 +18,12 @@ import {
   WELCOME_MESSAGE_MAX,
 } from "@iris/shared"
 import Image from "next/image"
+import { AiPanel } from "@/components/ai-panel"
 import { InviteLink } from "@/components/invite-link"
 import { PrefixForm } from "@/components/prefix-form"
 import { CommandPanel, GreetingPanel, WatchPanel } from "@/components/server-tools"
 import { fetchDiscordGuilds, fetchGuildBoosts, fetchGuildTextChannels } from "@/lib/discord"
-import { readWebEnv } from "@/lib/env"
+import { readAiKeys, readWebEnv } from "@/lib/env"
 import { getSession } from "@/lib/session"
 import type { Metadata } from "next"
 
@@ -82,6 +84,9 @@ export default async function DashboardPage({
   let watches: LiveWatch[] = []
   let textChannels = new Map<string, Array<{ id: string; name: string }>>()
   let boosts = new Map<string, { boosts: number; level: number }>()
+  let aiSettings = new Map<string, { provider: string; model: string; keyHint: string }>()
+  const aiKeys = readAiKeys()
+  const aiReady = aiKeys.ok && aiKeys.ring !== null
   let loadError = ""
 
   try {
@@ -113,6 +118,8 @@ export default async function DashboardPage({
     ])
     textChannels = new Map(listed)
     boosts = new Map(boosted)
+    const ai = await listGuildAiByIds(installed.map((guild) => guild.id))
+    aiSettings = new Map(ai.map(({ guildId, provider, model, keyHint }) => [guildId, { provider, model, keyHint }]))
   } catch (cause) {
     console.error(cause)
     loadError = "The server list could not be loaded. Sign in again."
@@ -210,6 +217,7 @@ export default async function DashboardPage({
                     )
                   })}
                 </div>
+                <AiPanel guildId={guild.id} ready={aiReady} saved={aiSettings.get(guild.id) ?? null} />
                 <CommandPanel
                   guildId={guild.id}
                   groups={commandGroups.map((group) => ({ id: group.id, label: group.label }))}
