@@ -62,8 +62,64 @@ export async function askAi(input: {
   turns: AiTurn[]
   maxTokens: number
   timeoutMs: number
+  reasoning: boolean
 }): Promise<AiAnswer> {
-  const { provider, key, model, system, turns, maxTokens, timeoutMs } = input
+  const variants = reasoningVariants(input.provider, input.reasoning)
+  const memo = `${input.provider}|${input.model}|${input.reasoning ? "on" : "off"}`
+  const start = Math.min(workingVariant.get(memo) ?? 0, variants.length - 1)
+  let last: AiAnswer = { ok: false, reason: "failed" }
+  for (let index = start; index < variants.length; index += 1) {
+    last = await askOnce(input, variants[index] as Variant)
+    if (last.ok || last.reason !== "model") {
+      if (last.ok) workingVariant.set(memo, index)
+      return last
+    }
+  }
+  return last
+}
+
+type Variant = { params: Record<string, unknown>; thinks: boolean }
+
+const THINKING_ROOM = 3000
+const workingVariant = new Map<string, number>()
+
+function reasoningVariants(provider: AiProvider, reasoning: boolean): Variant[] {
+  const plain = { params: {}, thinks: true }
+  const off = (params: Record<string, unknown>) => ({ params, thinks: false })
+  const on = (params: Record<string, unknown>) => ({ params, thinks: true })
+  switch (provider) {
+    case "openrouter":
+      return reasoning
+        ? [on({ reasoning: { effort: "medium", exclude: true } }), plain]
+        : [off({ reasoning: { effort: "none", exclude: true } }), on({ reasoning: { effort: "low", exclude: true } }), plain]
+    case "openai":
+      return reasoning
+        ? [on({ reasoning_effort: "medium" }), plain]
+        : [off({ reasoning_effort: "none" }), off({ reasoning_effort: "minimal" }), on({ reasoning_effort: "low" }), plain]
+    case "anthropic":
+      return reasoning
+        ? [on({ thinking: { type: "adaptive" } }), on({ thinking: { type: "enabled", budget_tokens: 1024 } }), plain]
+        : [off({ thinking: { type: "disabled" } }), plain]
+    case "gemini":
+      return reasoning
+        ? [on({ thinkingConfig: { thinkingLevel: "medium" } }), plain]
+        : [
+            off({ thinkingConfig: { thinkingLevel: "minimal" } }),
+            on({ thinkingConfig: { thinkingLevel: "low" } }),
+            off({ thinkingConfig: { thinkingBudget: 0 } }),
+            plain,
+          ]
+    default:
+      return reasoning ? [plain] : [off({ reasoning_effort: "none" }), plain]
+  }
+}
+
+async function askOnce(
+  input: { provider: AiProvider; key: string; model: string; system: string; turns: AiTurn[]; maxTokens: number; timeoutMs: number },
+  variant: Variant,
+): Promise<AiAnswer> {
+  const { provider, key, model, system, turns, timeoutMs } = input
+  const maxTokens = variant.thinks ? input.maxTokens + THINKING_ROOM : input.maxTokens
   try {
     if (provider === "anthropic") {
       const body = await call(`${ANTHROPIC}/messages`, anthropicHeaders(key), timeoutMs, {
@@ -71,6 +127,7 @@ export async function askAi(input: {
         max_tokens: maxTokens,
         system,
         messages: turns,
+        ...variant.params,
       })
       if (!body.ok) return body
       const parts = (record(body.json).content as unknown[] | undefined) ?? []
@@ -80,19 +137,20 @@ export async function askAi(input: {
       const body = await call(`${GEMINI}/models/${encodeURIComponent(model)}:generateContent`, { "x-goog-api-key": key }, timeoutMs, {
         systemInstruction: { parts: [{ text: system }] },
         contents: turns.map((turn) => ({ role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.content }] })),
-        generationConfig: { maxOutputTokens: maxTokens },
+        generationConfig: { maxOutputTokens: maxTokens, ...variant.params },
       })
       if (!body.ok) return body
       const candidate = record(((record(body.json).candidates as unknown[] | undefined) ?? [])[0])
       const parts = (record(candidate.content).parts as unknown[] | undefined) ?? []
-      return answer(parts.map((part) => String(record(part).text ?? "")).join(""))
+      return answer(parts.map((part) => (record(part).thought ? "" : String(record(part).text ?? ""))).join(""))
     }
     const base = OPENAI_STYLE[provider]
     if (!base) return { ok: false, reason: "failed" }
     const body = await call(`${base}/chat/completions`, bearer(key), timeoutMs, {
       model,
       messages: [{ role: "system", content: system }, ...turns],
-      ...(provider === "openai" ? { max_completion_tokens: maxTokens * 4 } : { max_tokens: maxTokens }),
+      ...(provider === "openai" ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
+      ...variant.params,
     })
     if (!body.ok) return body
     const choice = record(((record(body.json).choices as unknown[] | undefined) ?? [])[0])
@@ -100,6 +158,11 @@ export async function askAi(input: {
   } catch {
     return { ok: false, reason: "failed" }
   }
+}
+
+export function aiModelListed(provider: AiProvider, model: string, models: readonly string[]): boolean {
+  const base = provider === "openrouter" ? model.replace(/:nitro$/, "") : model
+  return models.includes(base)
 }
 
 async function call(

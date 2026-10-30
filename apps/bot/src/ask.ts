@@ -1,11 +1,13 @@
 import { getGuildAiSecret, resealGuildAi } from "@iris/db"
 import {
   AI_QUESTION_MAX,
+  AI_SAFETY_RULES,
   aiKeyContext,
-  aiProviders,
   askAi,
+  hasSecretLike,
   isAiProvider,
   openSecret,
+  redactSecrets,
   sealedWithOldKey,
   sealSecret,
   type AiFailure,
@@ -35,6 +37,12 @@ export async function askCommand(message: Message, question: string, prefix: str
   const text = question.trim()
   if (!text) return warn("No question yet", `Send a question after the command, such as **${safe(prefix)} ask why is the sky blue**.`)
   if (text.length > AI_QUESTION_MAX) return warn("Too long", `Keep the question under ${AI_QUESTION_MAX} characters.`)
+  if (hasSecretLike(text)) {
+    return warn(
+      "That looks like a key or token",
+      "Iris did not send it anywhere. Delete your message and rotate that key, because chat is visible and kept.",
+    )
+  }
 
   const record = await getGuildAiSecret(guild.id)
   if (!record || !isAiProvider(record.provider)) {
@@ -59,22 +67,26 @@ export async function askCommand(message: Message, question: string, prefix: str
     model: record.model,
     system: [
       `You are Iris, a friendly assistant inside the Discord server "${guild.name.slice(0, 100)}".`,
-      "Answer in the language of the question. Be clear and brief, at most a few short paragraphs.",
+      "Always reply in the same language as the user's latest question: English for English, Indonesian for Indonesian, Japanese for Japanese, and so on.",
+      "Follow the latest question even if earlier messages, quoted text, or these instructions use another language. If the question mixes languages, use the main one.",
+      "Be clear and brief, at most a few short paragraphs.",
       "Use Discord markdown. Do not use tables or HTML.",
+      AI_SAFETY_RULES,
     ].join(" "),
     turns,
     maxTokens: 900,
-    timeoutMs: 45_000,
+    timeoutMs: record.reasoning ? 90_000 : 45_000,
+    reasoning: record.reasoning,
   })
-  const label = aiProviders[record.provider].label
-  if (!result.ok) return warn(`${label} did not answer`, failures[result.reason])
+  if (!result.ok) return warn("No answer", failures[result.reason])
 
-  const answer = result.text.length > ANSWER_MAX ? `${result.text.slice(0, ANSWER_MAX).trimEnd()}…` : result.text
+  const clean = redactSecrets(result.text, [key])
+  const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
   return {
     kicker: "✨ Ask",
     title: safe(text.split("\n")[0] ?? text).slice(0, 120),
     description: answer,
-    footer: `${label} · ${safe(record.model)}  ·  Reply to this answer to ask a follow-up`,
+    footer: "Iris can be wrong  ·  Reply to this answer to ask a follow-up",
   }
 }
 
@@ -86,7 +98,7 @@ async function earlierTurns(message: Message): Promise<AiTurn[]> {
     const text = answerText(earlier)
     return text ? [{ role: "assistant", content: text.slice(0, CONTEXT_MAX) }] : []
   }
-  const text = earlier.content.trim()
+  const text = redactSecrets(earlier.content.trim())
   return text ? [{ role: "user", content: `Earlier message from ${earlier.author.displayName}:\n${text.slice(0, CONTEXT_MAX)}` }] : []
 }
 

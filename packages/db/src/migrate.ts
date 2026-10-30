@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS guild_ai (
   CONSTRAINT guild_ai_hint_check CHECK (char_length(key_hint) BETWEEN 1 AND 4)
 );
 
+ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS reasoning boolean NOT NULL DEFAULT false;
+
 DO $$ BEGIN
   ALTER TABLE guilds ADD CONSTRAINT guilds_boost_check CHECK (
     (boost_channel_id IS NULL OR boost_channel_id ~ '^[0-9]{5,22}$')

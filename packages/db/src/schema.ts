@@ -44,5 +44,6 @@ export const guildAi = pgTable("guild_ai", {
   model: text("model").notNull(),
   keySealed: text("key_sealed").notNull(),
   keyHint: text("key_hint").notNull(),
+  reasoning: boolean("reasoning").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })
