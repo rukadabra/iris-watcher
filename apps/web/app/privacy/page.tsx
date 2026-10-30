@@ -18,7 +18,8 @@ export default function PrivacyPage() {
         <li>
           The AI settings a manager saved for one server: the provider, the model, and that
           server&apos;s API key. The key is encrypted with AES-256-GCM before it is stored, it is tied
-          to that server and provider, and only its last four characters are ever shown again.
+          to that server and provider, and only its last four characters are ever shown again. The
+          same settings hold the channels Iris may chat in and a time zone.
         </li>
         <li>The dashboard session: user ID, display name, avatar, and the Discord OAuth token. The session lives in Redis and expires.</li>
         <li>The server count and a heartbeat time, for the status on the home page.</li>
@@ -34,7 +35,9 @@ export default function PrivacyPage() {
         Chat with Iris, including tagging her, replying to her, or the <code>ask</code> command, works
         only after a server manager adds a key for an AI provider. The message, the message it replies
         to, and the server name are sent to that provider with that server&apos;s key, and the
-        provider&apos;s own privacy terms apply. Some free tiers use prompts to train models. Iris does
+        provider&apos;s own privacy terms apply. If a manager turns on recent chat, up to eight earlier
+        messages from the last 30 minutes in that channel, with their authors&apos; display names, are sent
+        along too. Some free tiers use prompts to train models. Iris does
         not store questions or answers.
       </p>
       <h2>Discord permissions</h2>

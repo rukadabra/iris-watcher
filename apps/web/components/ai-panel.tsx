@@ -1,7 +1,15 @@
 "use client"
 
-import { AI_PERSONA_MAX, AI_PROVIDERS, aiProviders, aiTemperature, isAiProvider, type AiProvider } from "@iris/shared/ai"
-import { useActionState, useState } from "react"
+import {
+  AI_CHAT_CHANNELS_MAX,
+  AI_PERSONA_MAX,
+  AI_PROVIDERS,
+  aiProviders,
+  aiTemperature,
+  isAiProvider,
+  type AiProvider,
+} from "@iris/shared/ai"
+import { useActionState, useEffect, useState } from "react"
 import { saveAi } from "@/app/dashboard/actions"
 import type { PrefixActionState } from "@/lib/types"
 
@@ -11,6 +19,7 @@ export function AiPanel({
   guildId,
   ready,
   saved,
+  channels,
 }: {
   guildId: string
   ready: boolean
@@ -21,11 +30,17 @@ export function AiPanel({
     reasoning: boolean
     persona: string
     temperatureTenths: number | null
+    chatChannelIds: string[]
+    channelContext: boolean
+    timeZone: string | null
   } | null
+  channels: Array<{ id: string; name: string }>
 }) {
   const [state, action, pending] = useActionState(saveAi, initialState)
   const start: AiProvider = saved && isAiProvider(saved.provider) ? saved.provider : "gemini"
   const [provider, setProvider] = useState<AiProvider>(start)
+  const [zones, setZones] = useState<string[]>([])
+  useEffect(() => setZones(Intl.supportedValuesOf("timeZone")), [])
   const info = aiProviders[provider]
   const keeps = saved?.provider === provider
   const heat = aiTemperature[provider]
@@ -119,6 +134,55 @@ export function AiPanel({
               <span className="meta"> Better on hard questions, but slower and more expensive. Off answers fastest.</span>
             </span>
           </label>
+          <label className="check-row">
+            <input type="checkbox" name="channelContext" defaultChecked={saved?.channelContext ?? false} />
+            <span>
+              Read the recent chat when tagged
+              <span className="meta">
+                {" "}
+                Iris also sends up to 8 messages from the last 30 minutes in that channel, so she follows the topic and the
+                language. More tokens per answer. Nothing is stored.
+              </span>
+            </span>
+          </label>
+          <fieldset className="channel-picks">
+            <legend>Chat channels</legend>
+            <p className="meta">
+              Iris chats only in the channels checked here, at most {AI_CHAT_CHANNELS_MAX}. Leave all unchecked to chat
+              everywhere.
+            </p>
+            <div className="channel-grid">
+              {channels.map((channel) => (
+                <label key={channel.id} className="channel-pick">
+                  <input
+                    type="checkbox"
+                    name="chatChannels"
+                    value={channel.id}
+                    defaultChecked={saved?.chatChannelIds.includes(channel.id) ?? false}
+                  />
+                  <span>#{channel.name}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div className="temperature-row">
+            <input
+              name="timeZone"
+              aria-label="Time zone"
+              list={`time-zones-${guildId}`}
+              defaultValue={saved?.timeZone ?? ""}
+              placeholder="Time zone, such as Asia/Jakarta"
+              maxLength={64}
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <datalist id={`time-zones-${guildId}`}>
+              {zones.map((zone) => (
+                <option key={zone} value={zone} />
+              ))}
+            </datalist>
+            <p className="meta">Iris uses it for today&apos;s date and time. Empty means UTC.</p>
+          </div>
           <p className="meta">
             Get a key from{" "}
             <a href={info.keyUrl} target="_blank" rel="noopener noreferrer">

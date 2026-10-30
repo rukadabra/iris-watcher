@@ -14,6 +14,7 @@ export const aiProviders: Record<AiProvider, { label: string; example: string; k
 
 export const AI_QUESTION_MAX = 1500
 export const AI_PERSONA_MAX = 300
+export const AI_CHAT_CHANNELS_MAX = 25
 
 export type AiTemperatureGuide = { max: number; normal: string; advice: string; caveat: string }
 
@@ -91,6 +92,22 @@ export function parseAiPersona(raw: string): { ok: true; persona: string } | { o
     .trim()
   if (persona.length > AI_PERSONA_MAX) return { ok: false, error: `Keep the personality under ${AI_PERSONA_MAX} characters.` }
   return { ok: true, persona }
+}
+
+export function parseAiTimeZone(raw: string): { ok: true; timeZone: string | null } | { ok: false; error: string } {
+  const text = raw.trim()
+  if (!text) return { ok: true, timeZone: null }
+  if (text.length > 64 || !isTimeZone(text)) return { ok: false, error: "Use a time zone such as Asia/Jakarta." }
+  return { ok: true, timeZone: text }
+}
+
+export function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value })
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function isAiProvider(value: string): value is AiProvider {

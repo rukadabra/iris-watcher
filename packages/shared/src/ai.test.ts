@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { AI_PERSONA_MAX, parseAiPersona, parseAiTemperature } from "./ai"
+import { AI_PERSONA_MAX, parseAiPersona, parseAiTemperature, parseAiTimeZone } from "./ai"
 
 test("temperature is stored in tenths and empty means the default", () => {
   assert.deepEqual(parseAiTemperature("", "gemini"), { ok: true, tenths: null })
@@ -25,4 +25,10 @@ test("a personality is flattened to one clean line", () => {
 test("a personality over the limit is rejected", () => {
   assert.equal(parseAiPersona("a".repeat(AI_PERSONA_MAX)).ok, true)
   assert.equal(parseAiPersona("a".repeat(AI_PERSONA_MAX + 1)).ok, false)
+})
+
+test("a time zone must be a real IANA zone", () => {
+  assert.deepEqual(parseAiTimeZone(""), { ok: true, timeZone: null })
+  assert.deepEqual(parseAiTimeZone("Asia/Jakarta"), { ok: true, timeZone: "Asia/Jakarta" })
+  assert.equal(parseAiTimeZone("Mars/Olympus").ok, false)
 })

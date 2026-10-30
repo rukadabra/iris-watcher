@@ -17,8 +17,10 @@ import {
 import {
   aiModelListed,
   aiKeyContext,
+  AI_CHAT_CHANNELS_MAX,
   parseAiPersona,
   parseAiTemperature,
+  parseAiTimeZone,
   aiKeyHint,
   aiProviders,
   canManageGuild,
@@ -217,6 +219,12 @@ export async function saveAi(_state: PrefixActionState, formData: FormData): Pro
     if (!persona.ok) return failed(persona.error)
     const temperature = parseAiTemperature(String(formData.get("temperature") ?? ""), provider)
     if (!temperature.ok) return failed(temperature.error)
+    const timeZone = parseAiTimeZone(String(formData.get("timeZone") ?? ""))
+    if (!timeZone.ok) return failed(timeZone.error)
+    const picked = [...new Set(formData.getAll("chatChannels").map(String))]
+    if (picked.length > AI_CHAT_CHANNELS_MAX) return failed(`Choose at most ${AI_CHAT_CHANNELS_MAX} channels.`)
+    const known = new Set((await fetchGuildTextChannels(guildId)).map((channel) => channel.id))
+    if (picked.some((id) => !isSnowflake(id) || !known.has(id))) return failed("Choose channels from this server.")
     const context = aiKeyContext(guildId, provider)
 
     let key: string
@@ -244,6 +252,9 @@ export async function saveAi(_state: PrefixActionState, formData: FormData): Pro
       reasoning: formData.get("reasoning") === "on",
       persona: persona.persona,
       temperatureTenths: temperature.tenths,
+      chatChannelIds: picked,
+      channelContext: formData.get("channelContext") === "on",
+      timeZone: timeZone.timeZone,
     })
   } catch {
     console.error(`The AI settings for ${guildId} could not be saved`)

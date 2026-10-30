@@ -47,5 +47,8 @@ export const guildAi = pgTable("guild_ai", {
   reasoning: boolean("reasoning").notNull().default(false),
   persona: text("persona").notNull().default(""),
   temperatureTenths: smallint("temperature_tenths"),
+  chatChannelIds: text("chat_channel_ids").array().notNull().default([]),
+  channelContext: boolean("channel_context").notNull().default(false),
+  timeZone: text("time_zone"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })
