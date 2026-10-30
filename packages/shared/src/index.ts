@@ -99,7 +99,17 @@ export {
   type AiProvider,
 } from "./ai"
 export { AI_HIDDEN, AI_SAFETY_RULES, hasSecretLike, redactSecrets } from "./ai-guard"
-export { aiModelListed, askAi, listAiModels, type AiAnswer, type AiFailure, type AiModels, type AiTurn } from "./ai-client"
+export {
+  aiModelListed,
+  askAi,
+  listAiModels,
+  type AiAction,
+  type AiAnswer,
+  type AiFailure,
+  type AiModels,
+  type AiTool,
+  type AiTurn,
+} from "./ai-client"
 export { loadSecretRing, openSecret, sealedWithOldKey, sealSecret, type SecretRing, type SecretRingResult } from "./secret-box"
 export {
   BANNER_FALLBACK_FONTS,

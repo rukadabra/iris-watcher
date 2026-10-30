@@ -1,8 +1,8 @@
 import { upsertGuild } from "@iris/db"
 import { parseCommand } from "@iris/shared"
 import { Events, MessageFlags, type ButtonInteraction, type Client, type Message } from "discord.js"
-import { askCommand, isAskAnswer, sendAsk } from "./ask"
-import { commands } from "./commands"
+import { askCommand, isAskAnswer } from "./ask"
+import { answerChat, commands } from "./commands"
 import type { CommandStore } from "./command-store"
 import type { BotEnv } from "./env"
 import type { PrefixStore } from "./prefix-store"
@@ -79,7 +79,7 @@ async function onChat(
     if (isCoolingDown(message.author.id)) return
     const disabled = await commandGate.disabled(message.guildId)
     if (disabled.has("ask")) return
-    await sendAsk(message, await askCommand(message, message.content, prefix, env, { ping: how.tagged }))
+    await answerChat({ message, prefix, env, disabled }, await askCommand(message, message.content, prefix, env, { ping: how.tagged }))
   } catch (error) {
     console.error(`A chat reply failed in ${message.guildId}`, error)
   }
