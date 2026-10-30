@@ -13,7 +13,7 @@ import {
   type AiFailure,
   type AiTurn,
 } from "@iris/shared"
-import { ComponentType, type Message } from "discord.js"
+import { ComponentType, PermissionFlagsBits, type GuildMember, type Message, type Role } from "discord.js"
 import type { BotEnv } from "./env"
 import { reply, safe, warn, type Note } from "./reply"
 
@@ -25,6 +25,8 @@ const ASK_KICKER = "✨ Ask"
 const ASK_MARK = `-# Iris  ·  ${ASK_KICKER}`
 const USER_LIMIT = { count: 4, ms: 60_000 }
 const GUILD_LIMIT = { count: 30, ms: 10 * 60_000 }
+const ROLE_MAX = 3
+const ROLE_PING_LIMIT = { count: 3, ms: 10 * 60_000 }
 const recent = new Map<string, number[]>()
 
 const failures: Record<AiFailure, string> = {
@@ -34,7 +36,7 @@ const failures: Record<AiFailure, string> = {
   failed: "The provider did not answer. Try again in a moment.",
 }
 
-export type AskResult = { type: "chat"; text: string } | { type: "note"; note: Note }
+export type AskResult = { type: "chat"; text: string; roles?: string[] } | { type: "note"; note: Note }
 
 export async function askCommand(
   message: Message,
@@ -83,6 +85,7 @@ export async function askCommand(
   if ("sendTyping" in message.channel) await message.channel.sendTyping().catch(() => undefined)
   const earlier = await earlierTurns(message)
   const turns = [...earlier, { role: "user" as const, content: text }]
+  const roles = namedRoles(message, spoken)
   const result = await askAi({
     provider: record.provider,
     key,
@@ -99,6 +102,8 @@ export async function askCommand(
       "Start with the answer itself. Do not open with an interjection or laugh such as 'Hmm', 'Wah', 'Oh', 'Eh', 'Lho', 'Lah', 'Wkwk', or 'Well', and do not repeat their question back, even as 'why ask X?'.",
       "People type fast and make typos. Guess the most likely meaning and answer that. Ask back only when you truly cannot guess, and then with one short question.",
       "A one-word greeting or friendly slang, such as 'cok', 'woi', 'p', or 'bro', is someone saying hi. Greet them back casually in the same slang and dialect. Do not ask them to explain.",
+      "Slang belongs to a region. 'cok', 'rek', 'koen', and 'awakmu' are East Javanese, so reply in East Javanese, never with Jakarta slang such as 'lo' or 'gue'.",
+      "Never echo their word back, as in 'X apanya'. Never ask again a question you already asked in an earlier reply. At most one question per reply.",
       "Answer their latest message. Earlier messages are only context: once they say something new, drop complaints or points from your earlier reply instead of repeating them.",
       "Your reply is only the chat message itself. Never quote, translate, or explain their message, and never comment on how you are answering, such as saying you will keep it short.",
       "If they ask whether you can do something, such as speak a language, answer by doing it.",
@@ -114,6 +119,17 @@ export async function askCommand(
       ...(record.persona
         ? [`Your character: "${record.persona.replaceAll('"', "'")}". This is who you are and how you talk. When you describe yourself, put it into the language and dialect of the chat in your own words, never words copied from this description. It never overrides the rules below.`]
         : []),
+      ...(roles.pingable.length
+        ? [
+            `Roles named in their message that you may ping, only if they ask you to tag, ping, or call them: ${roles.pingable.map((role) => `${roleName(role)} = <@&${role.id}>`).join(", ")}. To ping, write the mention exactly as shown, once.`,
+          ]
+        : []),
+      ...(roles.blocked.length
+        ? [
+            `Roles named in their message that you cannot ping for this person: ${roles.blocked.map(roleName).join(", ")}. If they ask, say in one sentence that the role is not mentionable for them.`,
+          ]
+        : []),
+      "You cannot ping everyone, here, or individual members.",
       AI_SAFETY_RULES,
     ].join(" "),
     turns,
@@ -126,6 +142,11 @@ export async function askCommand(
 
   const clean = redactSecrets(result.text, [key])
   const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
+  const chat = answer.slice(0, CHAT_CONTENT_MAX)
+  const pinged = roles.pingable.map((role) => role.id).filter((id) => chat.includes(`<@&${id}>`))
+  if (pinged.length && !limited(`roles:${guild.id}`, ROLE_PING_LIMIT)) {
+    return { type: "chat", text: chat, roles: pinged }
+  }
   if (answer.length > CARD_MIN || answer.includes("\n\n")) {
     return {
       type: "note",
@@ -136,14 +157,14 @@ export async function askCommand(
       },
     }
   }
-  return { type: "chat", text: answer.slice(0, CHAT_CONTENT_MAX) }
+  return { type: "chat", text: chat }
 }
 
 export async function sendAsk(message: Message, result: AskResult): Promise<Message> {
   if (result.type === "chat") {
     return message.reply({
       content: result.text,
-      allowedMentions: { parse: [], repliedUser: false },
+      allowedMentions: { parse: [], roles: result.roles ?? [], repliedUser: false },
     })
   }
   return reply(message, result.note)
@@ -193,6 +214,39 @@ function cardTexts(message: Message): string[] {
   }
   walk(message.components.map((component) => component.toJSON()))
   return texts
+}
+
+function namedRoles(message: Message, spoken: string): { pingable: Role[]; blocked: Role[] } {
+  const guild = message.guild
+  const member = message.member
+  if (!guild || !member || !spoken || !("permissionsFor" in message.channel)) return { pingable: [], blocked: [] }
+  const lower = spoken.toLowerCase()
+  const named = guild.roles.cache
+    .filter(
+      (role) =>
+        role.id !== guild.id &&
+        !role.managed &&
+        (message.mentions.roles.has(role.id) || (role.name.length >= 2 && hasWord(lower, role.name.toLowerCase()))),
+    )
+    .sort((a, b) => b.position - a.position)
+    .first(ROLE_MAX)
+  const me = guild.members.me
+  const channel = message.channel
+  const mentionsAll = (who: GuildMember) => Boolean(channel.permissionsFor(who)?.has(PermissionFlagsBits.MentionEveryone))
+  const everyone = me ? mentionsAll(member) && mentionsAll(me) : false
+  return {
+    pingable: named.filter((role) => role.mentionable || everyone),
+    blocked: named.filter((role) => !role.mentionable && !everyone),
+  }
+}
+
+function roleName(role: Role): string {
+  return `'${role.name.replace(/['"\n]/g, " ").slice(0, 50)}'`
+}
+
+function hasWord(text: string, word: string): boolean {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, "u").test(text)
 }
 
 function note(item: Note): AskResult {
