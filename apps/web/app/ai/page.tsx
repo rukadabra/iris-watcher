@@ -59,7 +59,7 @@ export default function AiGuidePage() {
       <h2>Personality</h2>
       <p>
         An optional line of at most {AI_PERSONA_MAX} characters, such as &quot;playful and a little sarcastic&quot;. It
-        changes tone and style only. Iris still answers in the language of the question, keeps answers short, and follows
+        sets who Iris is and how she talks, so she answers questions about herself from it. Iris still answers in the language of the question, keeps answers short, and follows
         her safety rules, which a personality cannot change.
       </p>
 
