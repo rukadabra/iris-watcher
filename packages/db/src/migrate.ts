@@ -42,6 +42,17 @@ ALTER TABLE guilds ADD COLUMN IF NOT EXISTS welcome_message text;
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS boost_channel_id text;
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS boost_enabled boolean NOT NULL DEFAULT false;
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS boost_message text;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS music_channel_id text;
+ALTER TABLE guilds ADD COLUMN IF NOT EXISTS lyrics_channel_id text;
+
+DO $$ BEGIN
+  ALTER TABLE guilds ADD CONSTRAINT guilds_output_check CHECK (
+    (music_channel_id IS NULL OR music_channel_id ~ '^[0-9]{5,22}$')
+    AND (lyrics_channel_id IS NULL OR lyrics_channel_id ~ '^[0-9]{5,22}$')
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 DO $$ BEGIN
   ALTER TABLE guilds ADD CONSTRAINT guilds_volume_check CHECK (volume BETWEEN 0 AND 200 AND volume % 10 = 0);

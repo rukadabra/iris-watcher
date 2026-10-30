@@ -13,6 +13,7 @@ import {
 import { getGuildVolume, setGuildVolume } from "@iris/db"
 import type { YoutubeItem } from "@iris/shared"
 import { ChannelType, PermissionFlagsBits, type Message, type VoiceChannel } from "discord.js"
+import { outputChannel } from "./output"
 import { openRemoteAudio, resolveRemoteTracks, type RemoteTrack } from "./player-client"
 import { showPresence } from "./presence"
 import { note, present, safe, scene, warn, type Note } from "./reply"
@@ -460,8 +461,12 @@ async function connect(message: Message): Promise<{ session: Session; channel: V
 
 function rememberChannel(session: Session, message: Message): void {
   session.tell = (item) => {
-    if (!message.channel.isSendable()) return
-    void message.channel.send(present(message, item)).catch(() => {})
+    void outputChannel(message, "music")
+      .then(async (target) => {
+        const channel = target ?? (message.channel.isSendable() ? message.channel : null)
+        await channel?.send(present(message, item))
+      })
+      .catch(() => {})
   }
 }
 

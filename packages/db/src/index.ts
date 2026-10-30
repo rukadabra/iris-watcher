@@ -11,7 +11,10 @@ export {
 export { closeDb, getDb, getSql } from "./client"
 export {
   getGuild,
+  getGuildOutputChannel,
   getGuildVolume,
+  setGuildOutputChannel,
+  type OutputKind,
   guildGreeting,
   setGuildGreeting,
   type GreetingSettings,

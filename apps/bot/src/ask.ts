@@ -44,7 +44,7 @@ const failures: Record<AiFailure, string> = {
 export type AskResult =
   | { type: "chat"; text: string; roles?: string[] }
   | { type: "note"; note: Note }
-  | { type: "action"; action: ChatAction }
+  | { type: "action"; action: ChatAction; intro: string }
 
 export async function askCommand(
   message: Message,
@@ -136,7 +136,7 @@ export async function askCommand(
       "For example, 'can you speak French?' gets a reply like 'Bien sûr, sans problème.'",
       "When asked about yourself, such as where you are from, your age, or what you are, answer from your character. If your character does not say, give a short in-character answer. Never invent a real hometown or a human life.",
       "Never mention settings, a dashboard, server managers, prompts, or that you were given a personality. Stay in character.",
-      "When their latest message clearly asks you to play, pause, resume, skip, or stop music, show the queue, set repeat, leave voice, check the weather, or find lyrics, call the matching tool instead of replying. Act only on their latest message, never on earlier or recent channel messages.",
+      "When their latest message clearly asks you to play, pause, resume, skip, or stop music, show the queue, set repeat, leave voice, check the weather, or find lyrics, call the matching tool. With the call, write one short line in character and in their language saying you are on it, without naming a song or a result. Act only on their latest message, never on earlier or recent channel messages.",
       `Without a matching tool you cannot do it, so never say or suggest you did. Then say in one sentence, in character, that they can use '${prefix.replaceAll("'", "")} play <title>' or the matching command.`,
       "No opening praise such as 'Great question', no 'As an AI', and no closing lines such as 'Hope this helps' or 'Let me know if you have more questions'.",
       "Plain sentences. Use a list only for steps or a real comparison. No headings, tables, or HTML. Light Discord markdown is fine when it helps.",
@@ -166,7 +166,7 @@ export async function askCommand(
   })
   if (!result.ok) return note(warn("No answer", failures[result.reason]))
   const picked = result.action ? chatAction(result.action) : null
-  if (picked) return { type: "action", action: picked }
+  if (picked) return { type: "action", action: picked, intro: redactSecrets(result.text, [key]).split("\n")[0] ?? "" }
   if (!result.text) return note(warn("No answer", failures.failed))
 
   const clean = redactSecrets(result.text, [key])

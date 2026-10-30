@@ -22,7 +22,7 @@ import Image from "next/image"
 import { AiPanel } from "@/components/ai-panel"
 import { InviteLink } from "@/components/invite-link"
 import { PrefixForm } from "@/components/prefix-form"
-import { CommandPanel, GreetingPanel, WatchPanel } from "@/components/server-tools"
+import { CommandPanel, GreetingPanel, OutputPanel, WatchPanel } from "@/components/server-tools"
 import { fetchDiscordGuilds, fetchGuildBoosts, fetchGuildTextChannels } from "@/lib/discord"
 import { readAiKeys, readWebEnv } from "@/lib/env"
 import { getSession } from "@/lib/session"
@@ -77,6 +77,8 @@ export default async function DashboardPage({
     icon: string | null
     prefix: string | null
     liveChannelId: string | null
+    musicChannelId: string | null
+    lyricsChannelId: string | null
     disabledCommands: string[]
     welcome: GreetingSettings
     boost: GreetingSettings
@@ -105,6 +107,8 @@ export default async function DashboardPage({
         icon: guild.icon,
         prefix: known.get(guild.id)?.prefix ?? null,
         liveChannelId: known.get(guild.id)?.liveChannelId ?? null,
+        musicChannelId: known.get(guild.id)?.musicChannelId ?? null,
+        lyricsChannelId: known.get(guild.id)?.lyricsChannelId ?? null,
         disabledCommands: known.get(guild.id)?.disabledCommands ?? [],
         welcome: guildGreeting(known.get(guild.id) ?? null, "welcome"),
         boost: guildGreeting(known.get(guild.id) ?? null, "boost"),
@@ -219,6 +223,12 @@ export default async function DashboardPage({
                     )
                   })}
                 </div>
+                <OutputPanel
+                  guildId={guild.id}
+                  musicChannelId={guild.musicChannelId}
+                  lyricsChannelId={guild.lyricsChannelId}
+                  channels={textChannels.get(guild.id) ?? []}
+                />
                 <AiPanel
                   guildId={guild.id}
                   ready={aiReady}

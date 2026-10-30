@@ -15,7 +15,7 @@ This document is for a Cursor agent opening the same repo on another machine. Do
 ## Repo layout
 
 - `apps/bot` — discord.js 14.27.0, one Gateway connection, voice, and health inside the process.
-- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the live-alert list, the welcome and boost banners, the AI provider, key, and chat controls, and which commands are on for that server. `output: "standalone"`.
+- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the music and lyrics output channels, the live-alert list, the welcome and boost banners, the AI provider, key, and chat controls, and which commands are on for that server. `output: "standalone"`.
 - `apps/player` — reads YouTube with `yt-dlp` and streams PCM through ffmpeg. It does not hold a Discord token.
 - `packages/shared` — prefix, command list, bot invite URL, and the YouTube link parser.
 - `packages/db` — Postgres, table `guilds`.
@@ -49,7 +49,8 @@ For live alerts, the player also accepts a validated channel target on `POST /ch
 - `play` while a song is playing adds the song to the queue. `play new` replaces the queue.
 - `pause` pauses, `resume` continues, `next` (or `skip`) plays the next song, `stop` clears the queue.
 - The 🔉 and 🔊 buttons on the playback card change the loudness of the song that is playing, in steps of 10%, from 0% to 200%. 100% is the song's own loudness. The number belongs to one Discord server and stays after Iris leaves. A server that has not been set uses 10%.
-- When a song changes on its own, Iris sends a new playback card in the same channel.
+- When a song changes on its own, Iris sends a new playback card in the same channel, or in the music channel when one is set.
+- Output channels: a manager may pick a music channel and a lyrics channel on the dashboard (`guilds.music_channel_id`, `guilds.lyrics_channel_id`, empty means the same channel). Music cards (join, play, queue, pause, resume, next, skip, loop, stop, leave, now playing) and lyrics cards are posted there, and the channel where the command was sent gets a short reply that links it. From an `@Iris` chat, that reply is Iris's own one-line answer. Warnings always stay in the channel where the command was sent. If Iris cannot view or send in the chosen channel, the card stays in the same channel.
 - `loop one` repeats the song that is playing. `loop all` repeats the queue from the start. `loop off` turns that off. `next` still moves to the next song.
 - `queue` shows 8 songs per page. `queue next` or the page buttons open the next page.
 - A video link that also carries `list=PL...` is treated as one video. A mix `list=RD...` is ignored because the follow-on queue is fetched separately.
