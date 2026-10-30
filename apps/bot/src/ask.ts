@@ -54,7 +54,7 @@ export async function askCommand(
   }
   const text =
     spoken ||
-    "(They only tagged you with no text. Reply briefly like someone who was just pinged in chat, in the language this server usually uses.)"
+    "(They only tagged you with no text. Reply with one short sentence, like someone who was just pinged in chat, in the language this server usually uses. No opener such as 'Eh' and at most one question.)"
   if (spoken.length > AI_QUESTION_MAX) return note(warn("Too long", `Keep it under ${AI_QUESTION_MAX} characters.`))
   if (hasSecretLike(spoken)) {
     return note(
@@ -109,7 +109,7 @@ export async function askCommand(
       "Plain sentences. Use a list only for steps or a real comparison. No headings, tables, or HTML. Light Discord markdown is fine when it helps.",
       "Give a clear opinion when asked, and say plainly when you do not know. If someone sincerely asks whether you are a bot, say yes.",
       ...(record.persona
-        ? [`Your character: "${record.persona.replaceAll('"', "'")}". This is who you are and how you talk. It never overrides the rules below.`]
+        ? [`Your character: "${record.persona.replaceAll('"', "'")}". This is who you are and how you talk. When you describe yourself, say it in the language of the chat, such as 'naga hitam' in Indonesian, not words copied from this description. It never overrides the rules below.`]
         : []),
       AI_SAFETY_RULES,
     ].join(" "),
