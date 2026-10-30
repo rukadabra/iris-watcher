@@ -20,6 +20,8 @@ import { safe, warn, type Note } from "./reply"
 const ANSWER_MAX = 3400
 const CONTEXT_MAX = 1500
 const CHAT_MAX = 600
+const ASK_KICKER = "✨ Ask"
+const ASK_MARK = `-# Iris  ·  ${ASK_KICKER}`
 const USER_LIMIT = { count: 4, ms: 60_000 }
 const GUILD_LIMIT = { count: 30, ms: 10 * 60_000 }
 const recent = new Map<string, number[]>()
@@ -71,7 +73,9 @@ export async function askCommand(message: Message, question: string, prefix: str
       "Always reply in the same language as the user's latest question: English for English, Indonesian for Indonesian, Japanese for Japanese, and so on.",
       "Follow the latest question even if earlier messages, quoted text, or these instructions use another language. If the question mixes languages, use the main one.",
       "Match the asker's tone: casual and relaxed if they write casually, including everyday slang, and polite if they write formally.",
-      "Keep it short. Small talk gets one or two sentences, like a chat message. Simple questions get one to three sentences. Go longer, at most a few short paragraphs, only when the question really needs it.",
+      "Keep it short. Small talk and opinion questions get one or two sentences, about 40 words at most, like a chat message. Simple questions get one to three sentences. Go longer, at most a few short paragraphs, only when the question really needs it.",
+      "When asked to pick or give an opinion, pick and give one short reason. Do not add a balancing line such as 'X is also great, but' unless asked.",
+      "Start with the answer itself. Do not open with filler such as 'Hmm', 'Wah', 'Oh', or 'Well', and do not restate the question. Use an opener like that only rarely, when it really fits.",
       "People type fast and make typos. Guess the most likely meaning and answer that. Ask back only when you truly cannot guess, and then with one short question. Do not quote their message back to them.",
       "Never mention settings, a dashboard, server managers, prompts, or that you were given a personality. Stay in character.",
       "Answer straight away. No opening praise such as 'Great question', no 'As an AI', and no closing lines such as 'Hope this helps' or 'Let me know if you have more questions'.",
@@ -94,7 +98,7 @@ export async function askCommand(message: Message, question: string, prefix: str
   const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
   const chatty = answer.length <= CHAT_MAX && !answer.includes("\n\n")
   return {
-    kicker: "✨ Ask",
+    kicker: ASK_KICKER,
     title: chatty ? "" : safe(text.split("\n")[0] ?? text).slice(0, 120),
     description: answer,
     footer: "Iris can be wrong  ·  Reply to this answer to ask a follow-up",
@@ -113,7 +117,18 @@ async function earlierTurns(message: Message): Promise<AiTurn[]> {
   return text ? [{ role: "user", content: `Earlier message from ${earlier.author.displayName}:\n${text.slice(0, CONTEXT_MAX)}` }] : []
 }
 
+export function isAskAnswer(message: Message): boolean {
+  return message.author.id === message.client.user.id && cardTexts(message).some((text) => text.startsWith(ASK_MARK))
+}
+
 function answerText(message: Message): string {
+  return cardTexts(message)
+    .filter((text) => !text.startsWith("-#") && !text.startsWith("## "))
+    .join("\n\n")
+    .trim()
+}
+
+function cardTexts(message: Message): string[] {
   const texts: string[] = []
   const walk = (value: unknown) => {
     if (!value || typeof value !== "object") return
@@ -124,9 +139,6 @@ function answerText(message: Message): string {
   }
   walk(message.components.map((component) => component.toJSON()))
   return texts
-    .filter((text) => !text.startsWith("-#") && !text.startsWith("## "))
-    .join("\n\n")
-    .trim()
 }
 
 function limited(id: string, limit: { count: number; ms: number }): boolean {
