@@ -1,7 +1,7 @@
 import { upsertGuild } from "@iris/db"
 import { parseCommand } from "@iris/shared"
 import { Events, MessageFlags, type ButtonInteraction, type Client, type Message } from "discord.js"
-import { askCommand, isAskAnswer } from "./ask"
+import { askCommand, isAskAnswer, sendAsk } from "./ask"
 import { commands } from "./commands"
 import type { CommandStore } from "./command-store"
 import type { BotEnv } from "./env"
@@ -33,9 +33,10 @@ async function onMessage(
   const prefix = await prefixes.getPrefix(message.guild.id)
   const parsed = parseCommand(message.content, prefix)
   if (!parsed) {
-    if (message.reference?.messageId && message.mentions.repliedUser?.id === message.client.user.id) {
-      await onFollowUp(message, prefix, commandGate, env)
-    }
+    const botId = message.client.user.id
+    const tagged = message.mentions.users.has(botId)
+    const replyToBot = Boolean(message.reference?.messageId && message.mentions.repliedUser?.id === botId)
+    if (tagged || replyToBot) await onChat(message, prefix, commandGate, env, { tagged, replyToBot })
     return
   }
 
@@ -60,16 +61,27 @@ async function onMessage(
   }
 }
 
-async function onFollowUp(message: Message, prefix: string, commandGate: CommandStore, env: BotEnv): Promise<void> {
+async function onChat(
+  message: Message,
+  prefix: string,
+  commandGate: CommandStore,
+  env: BotEnv,
+  how: { tagged: boolean; replyToBot: boolean },
+): Promise<void> {
   if (!message.guildId) return
   try {
-    const earlier = await message.fetchReference().catch(() => null)
-    if (!earlier || !isAskAnswer(earlier) || isCoolingDown(message.author.id)) return
+    if (how.replyToBot) {
+      const earlier = await message.fetchReference().catch(() => null)
+      if (!earlier || !isAskAnswer(earlier)) {
+        if (!how.tagged) return
+      }
+    }
+    if (isCoolingDown(message.author.id)) return
     const disabled = await commandGate.disabled(message.guildId)
     if (disabled.has("ask")) return
-    await reply(message, await askCommand(message, message.content, prefix, env))
+    await sendAsk(message, await askCommand(message, message.content, prefix, env, { ping: how.tagged }))
   } catch (error) {
-    console.error(`A follow-up failed in ${message.guildId}`, error)
+    console.error(`A chat reply failed in ${message.guildId}`, error)
   }
 }
 

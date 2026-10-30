@@ -31,10 +31,11 @@ export default function PrivacyPage() {
       </p>
       <h2>AI questions</h2>
       <p>
-        The <code>ask</code> command works only after a server manager adds a key for an AI provider.
-        The question, the message it replies to, and the server name are sent to that provider with
-        that server&apos;s key, and the provider&apos;s own privacy terms apply. Some free tiers use
-        prompts to train models. Iris does not store questions or answers.
+        Chat with Iris, including tagging her, replying to her, or the <code>ask</code> command, works
+        only after a server manager adds a key for an AI provider. The message, the message it replies
+        to, and the server name are sent to that provider with that server&apos;s key, and the
+        provider&apos;s own privacy terms apply. Some free tiers use prompts to train models. Iris does
+        not store questions or answers.
       </p>
       <h2>Discord permissions</h2>
       <p>
