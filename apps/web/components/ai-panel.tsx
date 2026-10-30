@@ -14,7 +14,7 @@ export function AiPanel({
 }: {
   guildId: string
   ready: boolean
-  saved: { provider: string; model: string; keyHint: string } | null
+  saved: { provider: string; model: string; keyHint: string; reasoning: boolean } | null
 }) {
   const [state, action, pending] = useActionState(saveAi, initialState)
   const start: AiProvider = saved && isAiProvider(saved.provider) ? saved.provider : "gemini"
@@ -27,7 +27,9 @@ export function AiPanel({
       <div className="block-head">
         <h3>AI</h3>
         <span className={saved ? "pill live" : "pill idle"}>
-          {saved && isAiProvider(saved.provider) ? `${aiProviders[saved.provider].label} · ${saved.model}` : "Off"}
+          {saved && isAiProvider(saved.provider)
+            ? `${aiProviders[saved.provider].label} · ${saved.model}${saved.reasoning ? " · thinking" : ""}`
+            : "Off"}
         </span>
       </div>
       <p className="meta">
@@ -55,7 +57,7 @@ export function AiPanel({
             name="model"
             aria-label="Model"
             defaultValue={keeps ? saved.model : ""}
-            placeholder={info.example}
+            placeholder={provider === "openrouter" ? `${info.example} (add :nitro for the fastest host)` : info.example}
             maxLength={120}
             spellCheck={false}
             autoComplete="off"
@@ -72,6 +74,13 @@ export function AiPanel({
             autoComplete="new-password"
             required={!keeps}
           />
+          <label className="check-row">
+            <input type="checkbox" name="reasoning" defaultChecked={saved?.reasoning ?? false} />
+            <span>
+              Let the model think before answering
+              <span className="meta"> Better on hard questions, but slower and more expensive. Off answers fastest.</span>
+            </span>
+          </label>
           <p className="meta">
             Get a key from{" "}
             <a href={info.keyUrl} target="_blank" rel="noopener noreferrer">

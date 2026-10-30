@@ -15,6 +15,7 @@ import {
   setLiveWatchEnabled,
 } from "@iris/db"
 import {
+  aiModelListed,
   aiKeyContext,
   aiKeyHint,
   aiProviders,
@@ -227,13 +228,14 @@ export async function saveAi(_state: PrefixActionState, formData: FormData): Pro
 
     const listed = await listAiModels(provider, key)
     if (!listed.ok) return failed(aiFailures[listed.reason])
-    if (!listed.models.includes(model.model)) return failed(`${model.model} is not available for this key.`)
+    if (!aiModelListed(provider, model.model, listed.models)) return failed(`${model.model} is not available for this key.`)
 
     await saveGuildAi(guildId, {
       provider,
       model: model.model,
       keySealed: sealSecret(ring, key, context),
       keyHint: aiKeyHint(key),
+      reasoning: formData.get("reasoning") === "on",
     })
   } catch {
     console.error(`The AI settings for ${guildId} could not be saved`)

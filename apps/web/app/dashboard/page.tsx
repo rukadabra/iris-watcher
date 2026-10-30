@@ -84,7 +84,7 @@ export default async function DashboardPage({
   let watches: LiveWatch[] = []
   let textChannels = new Map<string, Array<{ id: string; name: string }>>()
   let boosts = new Map<string, { boosts: number; level: number }>()
-  let aiSettings = new Map<string, { provider: string; model: string; keyHint: string }>()
+  let aiSettings = new Map<string, { provider: string; model: string; keyHint: string; reasoning: boolean }>()
   const aiKeys = readAiKeys()
   const aiReady = aiKeys.ok && aiKeys.ring !== null
   let loadError = ""
@@ -119,7 +119,9 @@ export default async function DashboardPage({
     textChannels = new Map(listed)
     boosts = new Map(boosted)
     const ai = await listGuildAiByIds(installed.map((guild) => guild.id))
-    aiSettings = new Map(ai.map(({ guildId, provider, model, keyHint }) => [guildId, { provider, model, keyHint }]))
+    aiSettings = new Map(
+      ai.map(({ guildId, provider, model, keyHint, reasoning }) => [guildId, { provider, model, keyHint, reasoning }]),
+    )
   } catch (cause) {
     console.error(cause)
     loadError = "The server list could not be loaded. Sign in again."

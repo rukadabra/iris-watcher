@@ -448,7 +448,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .prefix-row select { max-width: 16rem; }
 .greeting-grid { grid-template-columns: 1fr 1fr; }
 .welcome-form { display: grid; gap: 0.55rem; }
-.welcome-form select, .welcome-form textarea, .welcome-form input:not([type="hidden"]) {
+.welcome-form select, .welcome-form textarea, .welcome-form input:not([type="hidden"]):not([type="checkbox"]) {
   padding: 0.5rem 0.75rem;
   border-radius: 12px;
   border: 1px solid var(--line);
@@ -457,7 +457,10 @@ button:disabled { opacity: 0.6; cursor: wait; }
   font: inherit;
 }
 .welcome-form select { min-height: 2.6rem; max-width: 16rem; }
-.welcome-form input:not([type="hidden"]) { min-height: 2.6rem; max-width: 28rem; }
+.welcome-form input:not([type="hidden"]):not([type="checkbox"]) { min-height: 2.6rem; max-width: 28rem; }
+.check-row { display: flex; align-items: flex-start; gap: 0.55rem; cursor: pointer; }
+.check-row input { margin-top: 0.3rem; accent-color: var(--accent); }
+.check-row .meta { display: block; }
 .welcome-form textarea { resize: vertical; min-height: 4.5rem; }
 .welcome-form .meta { margin: 0; }
 .greeting-preview { margin: 0.35rem 0 0; display: grid; gap: 0.4rem; }

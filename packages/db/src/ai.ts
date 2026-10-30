@@ -7,25 +7,33 @@ export type GuildAiSummary = {
   provider: string
   model: string
   keyHint: string
+  reasoning: boolean
 }
 
 export type GuildAiSecret = {
   provider: string
   model: string
   keySealed: string
+  reasoning: boolean
 }
 
 export async function listGuildAiByIds(ids: string[]): Promise<GuildAiSummary[]> {
   if (ids.length === 0) return []
   return getDb()
-    .select({ guildId: guildAi.guildId, provider: guildAi.provider, model: guildAi.model, keyHint: guildAi.keyHint })
+    .select({
+      guildId: guildAi.guildId,
+      provider: guildAi.provider,
+      model: guildAi.model,
+      keyHint: guildAi.keyHint,
+      reasoning: guildAi.reasoning,
+    })
     .from(guildAi)
     .where(inArray(guildAi.guildId, ids))
 }
 
 export async function getGuildAiSecret(guildId: string): Promise<GuildAiSecret | null> {
   const rows = await getDb()
-    .select({ provider: guildAi.provider, model: guildAi.model, keySealed: guildAi.keySealed })
+    .select({ provider: guildAi.provider, model: guildAi.model, keySealed: guildAi.keySealed, reasoning: guildAi.reasoning })
     .from(guildAi)
     .where(eq(guildAi.guildId, guildId))
     .limit(1)
@@ -34,7 +42,7 @@ export async function getGuildAiSecret(guildId: string): Promise<GuildAiSecret |
 
 export async function saveGuildAi(
   guildId: string,
-  value: { provider: string; model: string; keySealed: string; keyHint: string },
+  value: { provider: string; model: string; keySealed: string; keyHint: string; reasoning: boolean },
 ): Promise<void> {
   const updatedAt = new Date()
   await getDb()
