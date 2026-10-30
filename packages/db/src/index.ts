@@ -4,6 +4,7 @@ export {
   removeGuildAi,
   resealGuildAi,
   saveGuildAi,
+  type GuildAiControls,
   type GuildAiSecret,
   type GuildAiSummary,
 } from "./ai"

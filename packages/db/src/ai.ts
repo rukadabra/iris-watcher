@@ -2,23 +2,35 @@ import { and, eq, inArray } from "drizzle-orm"
 import { getDb } from "./client"
 import { guildAi } from "./schema"
 
-export type GuildAiSummary = {
+export type GuildAiControls = {
+  reasoning: boolean
+  persona: string
+  temperatureTenths: number | null
+  chatChannelIds: string[]
+  channelContext: boolean
+  timeZone: string | null
+}
+
+export type GuildAiSummary = GuildAiControls & {
   guildId: string
   provider: string
   model: string
   keyHint: string
-  reasoning: boolean
-  persona: string
-  temperatureTenths: number | null
 }
 
-export type GuildAiSecret = {
+export type GuildAiSecret = GuildAiControls & {
   provider: string
   model: string
   keySealed: string
-  reasoning: boolean
-  persona: string
-  temperatureTenths: number | null
+}
+
+const controls = {
+  reasoning: guildAi.reasoning,
+  persona: guildAi.persona,
+  temperatureTenths: guildAi.temperatureTenths,
+  chatChannelIds: guildAi.chatChannelIds,
+  channelContext: guildAi.channelContext,
+  timeZone: guildAi.timeZone,
 }
 
 export async function listGuildAiByIds(ids: string[]): Promise<GuildAiSummary[]> {
@@ -29,9 +41,7 @@ export async function listGuildAiByIds(ids: string[]): Promise<GuildAiSummary[]>
       provider: guildAi.provider,
       model: guildAi.model,
       keyHint: guildAi.keyHint,
-      reasoning: guildAi.reasoning,
-      persona: guildAi.persona,
-      temperatureTenths: guildAi.temperatureTenths,
+      ...controls,
     })
     .from(guildAi)
     .where(inArray(guildAi.guildId, ids))
@@ -43,9 +53,7 @@ export async function getGuildAiSecret(guildId: string): Promise<GuildAiSecret |
       provider: guildAi.provider,
       model: guildAi.model,
       keySealed: guildAi.keySealed,
-      reasoning: guildAi.reasoning,
-      persona: guildAi.persona,
-      temperatureTenths: guildAi.temperatureTenths,
+      ...controls,
     })
     .from(guildAi)
     .where(eq(guildAi.guildId, guildId))
@@ -55,14 +63,11 @@ export async function getGuildAiSecret(guildId: string): Promise<GuildAiSecret |
 
 export async function saveGuildAi(
   guildId: string,
-  value: {
+  value: GuildAiControls & {
     provider: string
     model: string
     keySealed: string
     keyHint: string
-    reasoning: boolean
-    persona: string
-    temperatureTenths: number | null
   },
 ): Promise<void> {
   const updatedAt = new Date()

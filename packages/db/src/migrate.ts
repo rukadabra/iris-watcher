@@ -76,6 +76,19 @@ CREATE TABLE IF NOT EXISTS guild_ai (
 ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS reasoning boolean NOT NULL DEFAULT false;
 ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS persona text NOT NULL DEFAULT '';
 ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS temperature_tenths smallint;
+ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS chat_channel_ids text[] NOT NULL DEFAULT '{}';
+ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS channel_context boolean NOT NULL DEFAULT false;
+ALTER TABLE guild_ai ADD COLUMN IF NOT EXISTS time_zone text;
+
+DO $$ BEGIN
+  ALTER TABLE guild_ai ADD CONSTRAINT guild_ai_controls_check CHECK (
+    cardinality(chat_channel_ids) <= 25
+    AND array_to_string(chat_channel_ids, ',') ~ '^([0-9]{5,22}(,[0-9]{5,22})*)?$'
+    AND (time_zone IS NULL OR char_length(time_zone) BETWEEN 1 AND 64)
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 DO $$ BEGIN
   ALTER TABLE guild_ai ADD CONSTRAINT guild_ai_persona_check CHECK (char_length(persona) <= 300);

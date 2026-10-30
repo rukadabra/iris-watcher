@@ -468,6 +468,12 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .check-row { display: flex; align-items: flex-start; gap: 0.55rem; cursor: pointer; }
 .check-row input { margin-top: 0.3rem; accent-color: var(--accent); }
 .check-row .meta { display: block; }
+.channel-picks { display: grid; gap: 0.4rem; margin: 0; padding: 0.7rem 0.8rem; border: 1px solid var(--line); border-radius: 10px; }
+.channel-picks legend { padding: 0 0.3rem; font-weight: 600; }
+.channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.3rem 0.8rem; max-height: 12rem; overflow-y: auto; }
+.channel-pick { display: flex; align-items: center; gap: 0.45rem; min-width: 0; cursor: pointer; }
+.channel-pick input { accent-color: var(--accent); }
+.channel-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .welcome-form textarea { resize: vertical; min-height: 4.5rem; }
 .welcome-form .meta { margin: 0; }
 .greeting-preview { margin: 0.35rem 0 0; display: grid; gap: 0.4rem; }

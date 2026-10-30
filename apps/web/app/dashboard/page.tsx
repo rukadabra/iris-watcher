@@ -5,6 +5,7 @@ import {
   listGuildsByIds,
   listLiveWatchesByGuildIds,
   type GreetingSettings,
+  type GuildAiSummary,
   type LiveWatch,
 } from "@iris/db"
 import {
@@ -84,10 +85,7 @@ export default async function DashboardPage({
   let watches: LiveWatch[] = []
   let textChannels = new Map<string, Array<{ id: string; name: string }>>()
   let boosts = new Map<string, { boosts: number; level: number }>()
-  let aiSettings = new Map<
-    string,
-    { provider: string; model: string; keyHint: string; reasoning: boolean; persona: string; temperatureTenths: number | null }
-  >()
+  let aiSettings = new Map<string, Omit<GuildAiSummary, "guildId">>()
   const aiKeys = readAiKeys()
   const aiReady = aiKeys.ok && aiKeys.ring !== null
   let loadError = ""
@@ -124,8 +122,7 @@ export default async function DashboardPage({
     const ai = await listGuildAiByIds(installed.map((guild) => guild.id))
     aiSettings = new Map(
       ai.map(({ guildId, ...setting }) => [guildId, setting]),
-    )
-  } catch (cause) {
+    )  } catch (cause) {
     console.error(cause)
     loadError = "The server list could not be loaded. Sign in again."
   }
@@ -222,7 +219,12 @@ export default async function DashboardPage({
                     )
                   })}
                 </div>
-                <AiPanel guildId={guild.id} ready={aiReady} saved={aiSettings.get(guild.id) ?? null} />
+                <AiPanel
+                  guildId={guild.id}
+                  ready={aiReady}
+                  saved={aiSettings.get(guild.id) ?? null}
+                  channels={textChannels.get(guild.id) ?? []}
+                />
                 <CommandPanel
                   guildId={guild.id}
                   groups={commandGroups.map((group) => ({ id: group.id, label: group.label }))}
