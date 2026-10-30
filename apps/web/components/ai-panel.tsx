@@ -42,7 +42,8 @@ export function AiPanel({
         </span>
       </div>
       <p className="meta">
-        Members ask with the <code>ask</code> command. This server brings its own API key, so usage and cost stay on that key.
+        Members talk with Iris by tagging her, or with the <code>ask</code> command. This server brings its own API key, so
+        usage and cost stay on that key.
       </p>
       {!ready ? (
         <p className="meta">AI keys are not set up on this copy of Iris yet.</p>

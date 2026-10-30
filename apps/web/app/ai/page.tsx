@@ -8,8 +8,8 @@ export default function AiGuidePage() {
     <main className="page prose">
       <h1>AI guide</h1>
       <p>
-        These settings shape how Iris answers <code>ask</code> in one server. A manager changes them on the dashboard,
-        next to the provider, the model, and the key.
+        These settings shape how Iris chats when someone tags her, replies to her, or uses <code>ask</code>. A manager
+        changes them on the dashboard, next to the provider, the model, and the key.
       </p>
 
       <h2>Temperature</h2>

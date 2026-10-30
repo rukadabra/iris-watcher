@@ -97,7 +97,7 @@ Examples use the default prefix. A server with a custom prefix uses that prefix 
 | `!iris trivia` | Asks one question. The answer is hidden |
 | `!iris news <topic>` | Shows recent headlines for a topic |
 | `!iris hn [query]` | Shows the Hacker News front page, or a search |
-| `!iris ask <question>` | Asks the AI model this server chose. Reply to an answer to ask a follow-up |
+| `@Iris <message>` or `!iris ask <question>` | Talks with Iris. Short answers are plain chat; reply to continue |
 
 The playback card also has buttons for pause, resume, next, stop, queue pages, loop, and volume. Volume moves by 10%. Each server keeps its own level.
 
@@ -105,7 +105,7 @@ The person who starts music must already be in a normal voice channel. Iris need
 
 Lookups do not use voice. `lyrics` with no title uses the song playing in that server.
 
-`!iris ask` uses the server's own API key. A manager picks a provider (OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, DeepSeek, or xAI), a model, and a key on the dashboard. Iris checks the key and the model with the provider before saving, then stores the key encrypted. Reasoning is off by default for the fastest answers, and a manager can turn it on for harder questions. On OpenRouter, add `:nitro` to the model to use the fastest host. Each person can ask 4 questions a minute, and each server 30 every 10 minutes.
+Tagging Iris, replying to her chat, or `!iris ask` uses the server's own API key. A manager picks a provider (OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, DeepSeek, or xAI), a model, and a key on the dashboard. Iris checks the key and the model with the provider before saving, then stores the key encrypted. Reasoning is off by default for the fastest answers, and a manager can turn it on for harder questions. On OpenRouter, add `:nitro` to the model to use the fastest host. Each person can ask 4 questions a minute, and each server 30 every 10 minutes.
 
 `!iris live` does not use voice. The watch list and the destination channel belong to one Discord server. A server can watch up to 50 YouTube channels. Who may change the list: the server owner, Manage Server, or Administrator.
 

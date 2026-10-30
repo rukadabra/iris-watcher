@@ -225,7 +225,7 @@ export const commandList = [
     name: "ask",
     group: "ai",
     emoji: "✨",
-    summary: "Asks the AI model this server chose on the dashboard. Reply to an answer to ask a follow-up",
+    summary: "Talk with Iris. Prefer @Iris with a message, or reply to her chat. This command still works too",
     usage: "ask <question>",
     examples: ["ask why is the sky blue"],
   },
