@@ -3,42 +3,42 @@ import { describe, it } from "node:test"
 import { parseCommand, parseCustomPrefix } from "./prefix"
 
 describe("parseCommand", () => {
-  it("membaca perintah setelah prefix bawaan", () => {
+  it("reads a command after the default prefix", () => {
     assert.deepEqual(parseCommand("!iris help", "!iris"), { name: "help", args: [] })
     assert.deepEqual(parseCommand("!iris ping now", "!iris"), { name: "ping", args: ["now"] })
   })
 
-  it("mengabaikan prefix yang menempel pada kata", () => {
+  it("ignores a prefix attached to a word", () => {
     assert.equal(parseCommand("!irishelp", "!iris"), null)
     assert.equal(parseCommand("!iris", "!iris"), null)
   })
 
-  it("mengubah nama perintah menjadi huruf kecil", () => {
+  it("lowercases the command name", () => {
     assert.deepEqual(parseCommand("!iris HELP", "!iris"), { name: "help", args: [] })
   })
 
-  it("mengizinkan perintah menempel bila prefix diakhiri simbol", () => {
+  it("allows an attached command when the prefix ends with a symbol", () => {
     assert.deepEqual(parseCommand("!help", "!"), { name: "help", args: [] })
     assert.deepEqual(parseCommand("! help", "!"), { name: "help", args: [] })
   })
 
-  it("menghormati prefix khusus server", () => {
+  it("respects a server's custom prefix", () => {
     assert.deepEqual(parseCommand("? ping", "?"), { name: "ping", args: [] })
     assert.equal(parseCommand("!iris ping", "?"), null)
   })
 })
 
 describe("parseCustomPrefix", () => {
-  it("menerima prefix bawaan dan simbol pendek", () => {
+  it("accepts the default prefix and a short symbol", () => {
     assert.deepEqual(parseCustomPrefix("!iris"), { ok: true, prefix: "!iris" })
     assert.deepEqual(parseCustomPrefix("!"), { ok: true, prefix: "!" })
   })
 
-  it("menolak spasi, mention, dan string kosong", () => {
+  it("rejects spaces, mentions, and an empty string", () => {
     assert.equal(parseCustomPrefix("! iris").ok, false)
     assert.equal(parseCustomPrefix("@iris").ok, false)
     assert.equal(parseCustomPrefix("<@123>").ok, false)
     assert.equal(parseCustomPrefix("").ok, false)
-    assert.equal(parseCustomPrefix("prefixterlalu").ok, false)
+    assert.equal(parseCustomPrefix("prefixtoolong").ok, false)
   })
 })

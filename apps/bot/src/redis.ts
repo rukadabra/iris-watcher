@@ -15,7 +15,7 @@ export async function connectRedis(redis: Redis): Promise<void> {
   await Promise.race([
     redis.connect(),
     new Promise<never>((_resolve, reject) => {
-      setTimeout(() => reject(new Error("Redis tidak dapat dihubungi")), 15_000)
+      setTimeout(() => reject(new Error("Redis cannot be reached")), 15_000)
     }),
   ])
 }

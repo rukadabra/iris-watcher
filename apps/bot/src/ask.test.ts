@@ -4,55 +4,55 @@ import { nameInSpoken, pickNamedMembers, rewriteMemberMentions, spokenReply } fr
 
 const leaked = [
   'Mention the member "Sales Dota 2" with the mention I was given. The user wants me to tag them and invite them to play Dota. This is an invitation, so I answer in character with one short line and no tool call.',
-  'Indonesian, casual. Avoid "Kak" and such.',
-  "<@Sales Dota 2> ayo main Dota bareng, aku udah siap nih, jangan kabur ya!",
+  "Casual, one short line, no tool call.",
+  "<@Sales Dota 2> come play Dota, I'm ready, don't run away!",
 ].join("\n\n")
 
 describe("spokenReply", () => {
-  it("membuang paragraf instruksi dan menyisakan baris chat", () => {
-    assert.equal(spokenReply(leaked), "<@Sales Dota 2> ayo main Dota bareng, aku udah siap nih, jangan kabur ya!")
+  it("drops the instruction paragraphs and keeps the chat line", () => {
+    assert.equal(spokenReply(leaked), "<@Sales Dota 2> come play Dota, I'm ready, don't run away!")
   })
 
-  it("membiarkan jawaban biasa yang lebih dari satu paragraf", () => {
-    const answer = "Satu.\n\nDua."
+  it("keeps a normal answer with more than one paragraph", () => {
+    const answer = "One.\n\nTwo."
     assert.equal(spokenReply(answer), answer)
   })
 
-  it("membuang jawaban yang membocorkan ping token", () => {
+  it("drops an answer that leaks the ping token", () => {
     assert.equal(spokenReply("I don't have a ping token for sales in this context, so you need to @ them first."), "")
   })
 })
 
 describe("rewriteMemberMentions", () => {
-  it("mengganti nama di dalam mention dengan id anggota", () => {
+  it("rewrites a name inside a mention to the member id", () => {
     const text = spokenReply(leaked)
-    assert.equal(rewriteMemberMentions(text, [{ id: "42", name: "Sales Dota 2" }]), "<@42> ayo main Dota bareng, aku udah siap nih, jangan kabur ya!")
+    assert.equal(rewriteMemberMentions(text, [{ id: "42", name: "Sales Dota 2" }]), "<@42> come play Dota, I'm ready, don't run away!")
   })
 
-  it("tidak mengubah mention yang sudah benar", () => {
-    assert.equal(rewriteMemberMentions("hai <@42>", [{ id: "42", name: "Sales Dota 2" }]), "hai <@42>")
+  it("leaves a correct mention alone", () => {
+    assert.equal(rewriteMemberMentions("hi <@42>", [{ id: "42", name: "Sales Dota 2" }]), "hi <@42>")
   })
 })
 
 describe("nameInSpoken", () => {
-  it("mengenali nama tampilan yang ditulis di pesan", () => {
-    assert.equal(nameInSpoken("tag sales dota 2, ajakin dia main dota", "Sales Dota 2"), true)
+  it("finds a display name written in the message", () => {
+    assert.equal(nameInSpoken("tag sales dota 2 and invite them to play dota", "Sales Dota 2"), true)
   })
 
-  it("mengenali nama tanpa spasi yang sama", () => {
-    assert.equal(nameInSpoken("tag salesdota2 dong", "Sales Dota 2"), true)
+  it("finds the same name written without spaces", () => {
+    assert.equal(nameInSpoken("tag salesdota2 please", "Sales Dota 2"), true)
   })
 
-  it("mengabaikan nama pendek satu kata supaya 'dota' tidak ikut", () => {
-    assert.equal(nameInSpoken("tag sales dota 2, ajakin dia main dota", "Dota"), false)
+  it("ignores a short one-word name so 'dota' does not match", () => {
+    assert.equal(nameInSpoken("tag sales dota 2 and invite them to play dota", "Dota"), false)
   })
 })
 
 describe("pickNamedMembers", () => {
-  it("menemukan anggota dari nama di teks tanpa mention Discord", () => {
+  it("finds a member from the name in the text without a Discord mention", () => {
     assert.deepEqual(
       pickNamedMembers({
-        spoken: "tag sales dota 2, ajakin dia main dota",
+        spoken: "tag sales dota 2 and invite them to play dota",
         mentioned: [],
         candidates: [
           { id: "42", name: "Sales Dota 2", aliases: ["Sales Dota 2", "salesdota"] },
@@ -64,10 +64,10 @@ describe("pickNamedMembers", () => {
     )
   })
 
-  it("memakai mention Discord lebih dulu", () => {
+  it("prefers the Discord mention", () => {
     assert.deepEqual(
       pickNamedMembers({
-        spoken: "jawab pertanyaannya",
+        spoken: "answer the question",
         mentioned: [{ id: "42", name: "Sales Dota 2" }],
         candidates: [{ id: "42", name: "Sales Dota 2", aliases: ["Sales Dota 2"] }],
         max: 3,

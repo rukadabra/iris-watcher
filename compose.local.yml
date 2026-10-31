@@ -1,4 +1,4 @@
-# Port host untuk `pnpm dev` di mesin ini. Dokploy tidak memakai file ini.
+# Host ports for `pnpm dev` on this machine. Dokploy does not use this file.
 services:
   postgres:
     ports:

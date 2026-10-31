@@ -88,7 +88,7 @@ export function openYoutubeStream(tools: YoutubeTools, videoId: string): {
   ffmpeg.on("error", stop)
   if (!ffmpeg.stdout) {
     stop()
-    throw new Error("ffmpeg tidak menyediakan keluaran audio")
+    throw new Error("ffmpeg did not provide an audio output")
   }
 
   return { stream: ffmpeg.stdout, stop }
@@ -108,7 +108,7 @@ async function radioQueue(tools: YoutubeTools, videoId: string): Promise<Youtube
   try {
     mix = await fetchRadio(videoId)
   } catch (error) {
-    console.error("Lanjutan YouTube gagal dibaca", error)
+    console.error("Could not read the YouTube continuation", error)
   }
 
   const tracks: YoutubeMeta[] = []
@@ -156,7 +156,7 @@ function run(command: string, args: string[]): Promise<string> {
         return
       }
       const detail = Buffer.concat(stderr).toString("utf8").trim()
-      reject(new Error(detail || `yt-dlp berhenti dengan kode ${code ?? "tidak diketahui"}`))
+      reject(new Error(detail || `yt-dlp exited with code ${code ?? "unknown"}`))
     })
   })
 }

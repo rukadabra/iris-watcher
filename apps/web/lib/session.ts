@@ -112,7 +112,7 @@ export async function destroySession(origin: string): Promise<void> {
       const redis = await connectRedis()
       await redis.del(sessionKey(id))
     } catch {
-      // Cookie tetap dihapus supaya browser keluar.
+      // Clear the cookie anyway so the browser signs out.
     }
   }
   jar.set(COOKIE, "", { ...cookieOptions(origin), maxAge: 0 })

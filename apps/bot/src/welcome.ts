@@ -100,7 +100,7 @@ export async function runGreetingCommand(kind: GreetingKind, message: Message, a
     await reply(message, await saveMessage(kind, guild, args.slice(1).join(" "), env))
     return
   }
-  await reply(message, warn("Unknown option", `Use ${kind}, ${kind} message <text>, ${kind} test, or ${kind} off.`))
+  await reply(message, warn("Unknown option", `Use ${kind}, ${kind} channel, ${kind} off, ${kind} on, ${kind} test, or ${kind} message <text>.`))
 }
 
 async function showPicker(kind: GreetingKind, message: Message): Promise<void> {

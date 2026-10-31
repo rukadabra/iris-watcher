@@ -47,7 +47,7 @@ export const commandList = [
     emoji: "👋",
     summary:
       "Greets new members with a banner. Choose the channel from the menu. message changes the text, test shows a preview, off turns it off",
-    usage: "welcome [off|test|message <text>]",
+    usage: "welcome [channel|off|on|test|message <text>]",
     examples: ["welcome", "welcome message Hi {user}, welcome to {server}!", "welcome test"],
   },
   {
@@ -56,7 +56,7 @@ export const commandList = [
     emoji: "💎",
     summary:
       "Thanks members who boost the server with a banner. Choose the channel from the menu. message changes the text, test shows a preview, off turns it off",
-    usage: "boost [off|test|message <text>]",
+    usage: "boost [channel|off|on|test|message <text>]",
     examples: ["boost", "boost message Thank you {user}! We now have {boosts} boosts.", "boost test"],
   },
   {

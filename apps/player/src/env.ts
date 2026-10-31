@@ -19,7 +19,7 @@ export function loadPlayerEnv(): PlayerEnv {
   const parsed = envSchema.safeParse(definedEnv())
   if (!parsed.success) {
     const fields = parsed.error.issues.map((issue) => issue.path.join(".") || "env").join(", ")
-    throw new Error(`Variabel lingkungan player belum lengkap: ${fields}`)
+    throw new Error(`Player environment variables are incomplete: ${fields}`)
   }
   return parsed.data
 }

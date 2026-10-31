@@ -1,6 +1,6 @@
-# Dokploy: pasang domain ke service `web` pada port 3000.
-# Bot dan web memakai Postgres dan Redis di compose ini.
-# Bot tidak punya port publik. Jalankan satu replika: dua koneksi Gateway dengan token yang sama saling memutus sesi.
+# Dokploy: attach the domain to the `web` service on port 3000.
+# The bot and the web use the Postgres and Redis in this compose file.
+# The bot has no public port. Run one replica: two Gateway connections with the same token disconnect each other.
 
 services:
   postgres:

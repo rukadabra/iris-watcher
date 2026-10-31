@@ -91,15 +91,15 @@ export async function runLiveCommand(message: Message, args: string[], env: BotE
   }
 
   const action = args[0]?.toLowerCase()
-  if (!action || action === "channel" || action === "saluran") {
+  if (!action || action === "channel") {
     await showPicker(message, null)
     return
   }
-  if (action === "list" || action === "daftar") {
+  if (action === "list") {
     await reply(message, await listNote(message))
     return
   }
-  if (action === "remove" || action === "hapus" || action === "off") {
+  if (action === "remove" || action === "off") {
     await reply(message, await removeNote(guild.id, args.slice(1).join(" ").trim(), env))
     return
   }
