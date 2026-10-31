@@ -131,7 +131,7 @@ export async function askCommand(
       "Slang belongs to a region. 'cok', 'rek', 'koen', and 'awakmu' are East Javanese, so reply in East Javanese, never with Jakarta slang such as 'lo' or 'gue'.",
       "Never echo their word back, as in 'X apanya'. Never ask again a question you already asked in an earlier reply. At most one question per reply.",
       "Answer their latest message. Earlier messages are only context: once they say something new, drop complaints or points from your earlier reply instead of repeating them. When they ask you to answer that question or reply to someone, that earlier question is what they mean.",
-      "A message that is only a mention of another member means the answer is for that person's latest question. Answer it, ping them with the mention you were given, and do not ask them to repeat it.",
+      "A message that is only a mention of another member means the answer is for that person's latest question. Answer that question and include their ping token. Do not ask them to repeat it.",
       "Your reply is only the chat message itself. Never quote, translate, or explain their message, never comment on how you are answering, and never write a plan, a tool note, a style note, or your name as a label.",
       "If they ask whether you can do something, such as speak a language, answer by doing it.",
       "When they write in a regional language or dialect, write the whole reply in that same dialect, including its words for 'I' and 'you'. Do not switch to another dialect or mix in the national language.",
@@ -163,12 +163,12 @@ export async function askCommand(
         : []),
       ...(namedMembers(message).length
         ? [
-            `Members they mentioned, whom you ping when the answer is for them: ${namedMembers(message)
-              .map((member) => `${member.name} = <@${member.id}>`)
-              .join(", ")}. Write the mention exactly as shown, once.`,
+            `Ping tokens, copied exactly once when the answer is for that member: ${namedMembers(message)
+              .map((member) => `${member.name} → <@${member.id}>`)
+              .join(", ")}. Never put a name inside <@ >.`,
           ]
         : []),
-      "You cannot ping everyone or here. Ping a member only with a mention you were given.",
+      "You cannot ping everyone or here.",
       AI_SAFETY_RULES,
     ].join(" "),
     turns,
@@ -183,7 +183,7 @@ export async function askCommand(
   if (picked) return { type: "action", action: picked, intro: redactSecrets(result.text, [key]).split("\n")[0] ?? "" }
   if (!result.text) return note(warn("No answer", failures.failed))
 
-  const clean = redactSecrets(result.text, [key])
+  const clean = rewriteMemberMentions(spokenReply(redactSecrets(result.text, [key])), namedMembers(message))
   const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
   const chat = answer.slice(0, CHAT_CONTENT_MAX)
   const pinged = roles.pingable.map((role) => role.id).filter((id) => chat.includes(`<@&${id}>`))
@@ -280,6 +280,40 @@ async function recentMessages(message: Message): Promise<string> {
       return [`${name.slice(0, 40)}: ${body.replace(/\s+/g, " ").slice(0, RECENT_LINE_MAX)}`]
     })
   return lines.join("\n").slice(-CONTEXT_MAX)
+}
+
+const STAGE_DIRECTION =
+  /mention (?:i was|you were) given|no tool call|in character|the user wants me to|this is an invitation|avoid ["']kak|write the mention exactly|indonesian, casual/i
+
+export function spokenReply(text: string): string {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((part) =>
+      part
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line && !STAGE_DIRECTION.test(line))
+        .join("\n"),
+    )
+    .filter(Boolean)
+  if (paragraphs.length) return paragraphs.join("\n\n")
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+  return lines[lines.length - 1] ?? text.trim()
+}
+
+export function rewriteMemberMentions(text: string, members: { id: string; name: string }[]): string {
+  let out = text
+  for (const member of members) {
+    const name = member.name.trim()
+    if (!name) continue
+    const token = `<@${member.id}>`
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    out = out.replace(new RegExp(`<@!?\\s*${escaped}\\s*>`, "gi"), token)
+  }
+  return out
 }
 
 function namedMembers(message: Message): { id: string; name: string }[] {
