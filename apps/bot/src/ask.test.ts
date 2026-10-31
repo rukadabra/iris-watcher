@@ -17,6 +17,10 @@ describe("spokenReply", () => {
     const answer = "Satu.\n\nDua."
     assert.equal(spokenReply(answer), answer)
   })
+
+  it("membuang jawaban yang membocorkan ping token", () => {
+    assert.equal(spokenReply("I don't have a ping token for sales in this context, so you need to @ them first."), "")
+  })
 })
 
 describe("rewriteMemberMentions", () => {
@@ -33,6 +37,10 @@ describe("rewriteMemberMentions", () => {
 describe("nameInSpoken", () => {
   it("mengenali nama tampilan yang ditulis di pesan", () => {
     assert.equal(nameInSpoken("tag sales dota 2, ajakin dia main dota", "Sales Dota 2"), true)
+  })
+
+  it("mengenali nama tanpa spasi yang sama", () => {
+    assert.equal(nameInSpoken("tag salesdota2 dong", "Sales Dota 2"), true)
   })
 
   it("mengabaikan nama pendek satu kata supaya 'dota' tidak ikut", () => {

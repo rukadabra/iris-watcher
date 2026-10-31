@@ -32,6 +32,8 @@ const ROLE_PING_LIMIT = { count: 3, ms: 10 * 60_000 }
 const RECENT_COUNT = 8
 const RECENT_LINE_MAX = 300
 const RECENT_MAX_AGE_MS = 30 * 60_000
+const MEMBER_LOOKUP_COUNT = 100
+const MEMBER_LOOKUP_MAX_AGE_MS = 24 * 60 * 60_000
 const recent = new Map<string, number[]>()
 
 const failures: Record<AiFailure, string> = {
@@ -95,9 +97,9 @@ export async function askCommand(
   }
   if ("sendTyping" in message.channel) await message.channel.sendTyping().catch(() => undefined)
   const earlier = await earlierTurns(message)
-  const recent = await loadRecent(message)
-  const recentChat = record.channelContext ? formatRecent(recent) : ""
-  const members = namedMembers(message, spoken, recent)
+  const history = await loadRecent(message)
+  const recentChat = record.channelContext ? formatRecent(history.context) : ""
+  const members = namedMembers(message, spoken, history.speakers)
   const content = recentChat
     ? `Recent messages in this channel, oldest first, only for context:\n${recentChat}\n\nTheir message to you:\n${text}`
     : text
@@ -134,9 +136,9 @@ export async function askCommand(
       "Slang belongs to a region. 'cok', 'rek', 'koen', and 'awakmu' are East Javanese, so reply in East Javanese, never with Jakarta slang such as 'lo' or 'gue'.",
       "Never echo their word back, as in 'X apanya'. Never ask again a question you already asked in an earlier reply. At most one question per reply.",
       "Answer their latest message. Earlier messages are only context: once they say something new, drop complaints or points from your earlier reply instead of repeating them. When they ask you to answer that question or reply to someone, that earlier question is what they mean.",
-      "A message that is only a mention of another member means the answer is for that person's latest question. Answer that question and include their ping token. Do not ask them to repeat it.",
-      "When they ask you to tag, ping, or call a member and you have that member's ping token, include the token once and say what they asked, in their language. Never say you cannot tag someone you have a token for.",
-      "When they ask you to tag someone and you have no ping token for them, say in one short line in their language that they need to @ that person first. Do not explain Discord limits.",
+      "A message that is only a mention of another member means the answer is for that person's latest question. Answer that question and include their <@id> mention. Do not ask them to repeat it.",
+      "When they ask you to tag, ping, or call a member and you were given their <@id> mention, write that mention once and say what they asked, in their language. Never say you cannot tag them.",
+      "When they ask you to tag someone and you were not given their <@id> mention, say in one short line in their language that they should @ that person first. Never say ping token, token, mention id, or anything about missing mentions.",
       "Your reply is only the chat message itself. Never quote, translate, or explain their message, never comment on how you are answering, and never write a plan, a tool note, a style note, or your name as a label.",
       "If they ask whether you can do something, such as speak a language, answer by doing it.",
       "When they write in a regional language or dialect, write the whole reply in that same dialect, including its words for 'I' and 'you'. Do not switch to another dialect or mix in the national language.",
@@ -168,9 +170,9 @@ export async function askCommand(
         : []),
       ...(members.length
         ? [
-            `Ping tokens, copied exactly once when the answer is for that member or they asked you to tag them: ${members
+            `Members you may @ when the answer is for them or they asked you to tag them: ${members
               .map((member) => `${member.name} → <@${member.id}>`)
-              .join(", ")}. Never put a name inside <@ >.`,
+              .join(", ")}. Copy the <@id> exactly once. Never put a name inside <@ >. Never say the words ping token.`,
           ]
         : []),
       "You cannot ping everyone or here.",
@@ -189,6 +191,7 @@ export async function askCommand(
   if (!result.text) return note(warn("No answer", failures.failed))
 
   const clean = rewriteMemberMentions(spokenReply(redactSecrets(result.text, [key])), members)
+  if (!clean.trim()) return note(warn("No answer", failures.failed))
   const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
   const chat = answer.slice(0, CHAT_CONTENT_MAX)
   const pinged = roles.pingable.map((role) => role.id).filter((id) => chat.includes(`<@&${id}>`))
@@ -275,15 +278,17 @@ type RecentMessage = {
   aliases: string[]
   body: string
   own: boolean
+  at: number
 }
 
-async function loadRecent(message: Message): Promise<RecentMessage[]> {
-  const fetched = await message.channel.messages.fetch({ limit: RECENT_COUNT, before: message.id }).catch(() => null)
-  if (!fetched) return []
-  const since = message.createdTimestamp - RECENT_MAX_AGE_MS
+async function loadRecent(message: Message): Promise<{ context: RecentMessage[]; speakers: RecentMessage[] }> {
+  const fetched = await message.channel.messages.fetch({ limit: MEMBER_LOOKUP_COUNT, before: message.id }).catch(() => null)
+  if (!fetched) return { context: [], speakers: [] }
+  const contextSince = message.createdTimestamp - RECENT_MAX_AGE_MS
+  const speakerSince = message.createdTimestamp - MEMBER_LOOKUP_MAX_AGE_MS
   const skip = message.reference?.messageId
-  return [...fetched.values()]
-    .filter((item) => item.createdTimestamp >= since && item.id !== skip && !item.system)
+  const items = [...fetched.values()]
+    .filter((item) => item.createdTimestamp >= speakerSince && item.id !== skip && !item.system)
     .reverse()
     .map((item) => {
       const own = item.author.id === message.client.user.id
@@ -295,8 +300,13 @@ async function loadRecent(message: Message): Promise<RecentMessage[]> {
         aliases: memberAliases(item.member ?? null, item.author),
         body,
         own,
+        at: item.createdTimestamp,
       }
     })
+  return {
+    context: items.filter((item) => item.at >= contextSince).slice(-RECENT_COUNT),
+    speakers: items,
+  }
 }
 
 function formatRecent(recent: RecentMessage[]): string {
@@ -319,16 +329,17 @@ function memberAliases(member: GuildMember | null, user: { username: string; dis
 }
 
 const STAGE_DIRECTION =
-  /mention (?:i was|you were) given|no tool call|in character|the user wants me to|this is an invitation|avoid ["']kak|write the mention exactly|indonesian, casual/i
+  /mention (?:i was|you were) given|no tool call|in character|the user wants me to|this is an invitation|avoid ["']kak|write the mention exactly|indonesian, casual|ping tokens?|mention id|in this context/i
 
 export function spokenReply(text: string): string {
+  const keep = (line: string) => line && !STAGE_DIRECTION.test(line)
   const paragraphs = text
     .split(/\n{2,}/)
     .map((part) =>
       part
         .split("\n")
         .map((line) => line.trim())
-        .filter((line) => line && !STAGE_DIRECTION.test(line))
+        .filter(keep)
         .join("\n"),
     )
     .filter(Boolean)
@@ -336,8 +347,8 @@ export function spokenReply(text: string): string {
   const lines = text
     .split("\n")
     .map((line) => line.trim())
-    .filter(Boolean)
-  return lines[lines.length - 1] ?? text.trim()
+    .filter(keep)
+  return lines[lines.length - 1] ?? ""
 }
 
 export function rewriteMemberMentions(text: string, members: { id: string; name: string }[]): string {
@@ -428,7 +439,10 @@ export function nameInSpoken(spokenLower: string, name: string): boolean {
   if (label.length < 2) return false
   const multi = /[\s_\-.]/.test(label)
   if (!multi && label.length < 5) return false
-  return hasWord(spokenLower, label)
+  if (hasWord(spokenLower, label)) return true
+  const compactSpoken = spokenLower.replace(/[^\p{L}\p{N}]+/gu, "")
+  const compactLabel = label.replace(/[^\p{L}\p{N}]+/gu, "")
+  return compactLabel.length >= 5 && compactSpoken.includes(compactLabel)
 }
 
 function namedRoles(message: Message, spoken: string): { pingable: Role[]; blocked: Role[] } {
