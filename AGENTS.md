@@ -8,17 +8,17 @@ This document is for a Cursor agent opening the same repo on another machine. Do
 
 - One Gateway process only. Two processes with the same `DISCORD_TOKEN` disconnect each other. Do not run the bot locally at the same time as the bot replica on the VPS.
 - Do not add slash commands. Do not enable the `GuildMembers` or `GuildPresences` intents. The presence on Iris's profile is the bot's own activity: Listening to the title that is playing, or YouTube when nothing is playing. While paused, the status is idle.
-- The prefix belongs to one server, not one channel. An empty value in the database means the default prefix. The web writes the prefix. The bot only displays it.
+- The prefix belongs to one server, not one channel. An empty value in the database means the default prefix. The web writes the prefix. The bot only displays it. A prefix is 1 to 12 characters, with no whitespace and no `@`, `<`, or `>`.
 - After a prefix that ends in a letter or number, the command must be separated by a space: `!iris help` runs, `!irishelp` does not. A prefix that ends in a symbol may be attached (`!help`) or spaced (`! help`).
 - Site images use `next/image` and string paths from `public/`.
 
 ## Repo layout
 
 - `apps/bot` — discord.js 14.27.0, one Gateway connection, voice, and health inside the process.
-- `apps/web` — Next.js 16, landing page and dashboard. The dashboard changes the prefix, the music and lyrics output channels, the live-alert list, the welcome and boost banners, the AI provider, key, and chat controls, and which commands are on for that server. `output: "standalone"`.
+- `apps/web` — Next.js 16. Pages: `/` (landing), `/dashboard`, `/commands`, `/ai`, `/privacy`, and `/terms`. The dashboard changes the prefix, the music and lyrics output channels, the live-alert list, the welcome and boost banners, the AI provider, key, and chat controls, and which commands are on for that server. `output: "standalone"`.
 - `apps/player` — reads YouTube with `yt-dlp` and streams PCM through ffmpeg. It does not hold a Discord token.
-- `packages/shared` — prefix, command list, bot invite URL, and the YouTube link parser.
-- `packages/db` — Postgres, table `guilds`.
+- `packages/shared` — code shared by the bot and the web: prefix parsing, the command list and groups, the bot invite URL and permission check, the YouTube and live-channel parsers, the lookup parsers and helpers, the banner and greeting drawing, the AI client, guards, and secret box, the Redis key names, and the env file loader. It exports its TypeScript sources directly through the `exports` map, so there is no build step.
+- `packages/db` — Postgres via Drizzle. Tables: `guilds` (prefix, output channels, volume, welcome and boost banners, disabled commands), `live_watches` (each server's YouTube alert list, destination channel, enabled flag, and live video marker, keyed by guild and YouTube channel), and `guild_ai` (provider, model, sealed key, reasoning, persona, temperature, chat channels, channel context, time zone). The schema is in `src/schema.ts`, and `src/migrate.ts` applies the same tables and check constraints as raw SQL.
 - Redis — prefix cache, dashboard sessions, and the status heartbeat.
 
 Node.js 24.17 or newer, because `@discordjs/voice` 0.19.2 requires it. Package manager: pnpm 10.33.3.
@@ -63,8 +63,8 @@ General:
 - `!iris about`
 - `!iris ping`
 - `!iris prefix`
-- `!iris welcome [off|on|test|message <text>]`
-- `!iris boost [off|on|test|message <text>]`
+- `!iris welcome [channel|off|on|test|message <text>]`
+- `!iris boost [channel|off|on|test|message <text>]`
 
 Music:
 
@@ -138,7 +138,7 @@ The person who sends a music command must already be in a normal voice channel. 
 
 The bot asks the player every 2 minutes. If the previous round is still running, the new round waits. A `/live` page whose canonical URL is a video and whose `videoDetails.isLive` is true sends one card, then the video link. The card uses Components V2, so the video preview comes from the link message below it, which Discord turns into an embed. The same video id is not sent again. A failure reading one channel does not clear the marker for a stream that is still going. When the `/live` page is no longer live, that marker is cleared so the next stream notifies again.
 
-`welcome` does not use the `GuildMembers` intent. Iris reacts to Discord's own join system message (`MessageType.UserJoin`), so the server must keep "Send a random welcome message when someone joins" on under System Messages. The channel, the on/off state, and the text belong to one server. Who may change them: the server owner, Manage Server, or Administrator. `!iris welcome` opens a text-channel dropdown and turns banners on. `message` sets the text (at most 300 characters, `{user}`, `{name}`, and `{server}` are filled in, `reset` restores the default). `test` shows a preview to anyone who runs it. `off` and `on` toggle it. Other bots are not greeted, and one server gets at most 10 banners a minute. The banner is a PNG drawn in the bot with `@napi-rs/canvas` and Poppins from `apps/bot/assets/fonts`. The drawing lives in `packages/shared/src/banner.ts` and takes any 2D canvas context, so the dashboard draws the same banner in a browser `<canvas>` as a live preview while the message is typed. Client components import it from `@iris/shared/banner` and `@iris/shared/welcome`, not from the package root, because the root also exports Node-only code. The bot image installs `font-noto` and `font-noto-emoji` for names outside Latin. Avatars and server icons are read only from the Discord CDN.
+`welcome` does not use the `GuildMembers` intent. Iris reacts to Discord's own join system message (`MessageType.UserJoin`), so the server must keep "Send a random welcome message when someone joins" on under System Messages. The channel, the on/off state, and the text belong to one server. Who may change them: the server owner, Manage Server, or Administrator. `!iris welcome` or `!iris welcome channel` opens a text-channel dropdown and turns banners on. `message` sets the text (at most 300 characters, `{user}`, `{name}`, and `{server}` are filled in, `reset` restores the default). `test` shows a preview to anyone who runs it. `off` and `on` toggle it. Other bots are not greeted, and one server gets at most 10 banners a minute. The banner is a PNG drawn in the bot with `@napi-rs/canvas` and Poppins from `apps/bot/assets/fonts`. The drawing lives in `packages/shared/src/banner.ts` and takes any 2D canvas context, so the dashboard draws the same banner in a browser `<canvas>` as a live preview while the message is typed. Client components import it from `@iris/shared/banner` and `@iris/shared/welcome`, not from the package root, because the root also exports Node-only code. The bot image installs `font-noto` and `font-noto-emoji` for names outside Latin. Avatars and server icons are read only from the Discord CDN.
 
 `boost` works the same way with its own channel, on/off state, and text. It reacts to Discord's boost system messages (`GuildBoost` and `GuildBoostTier1` to `GuildBoostTier3`), so "Send a message when someone boosts this server" must stay on. Its text also fills `{boosts}` (the server's boost count) and `{level}` (0 to 3). The boost banner uses a pink and violet theme with a gem badge on the avatar.
 

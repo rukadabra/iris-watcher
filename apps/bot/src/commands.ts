@@ -179,11 +179,11 @@ export const commands: Record<string, BotCommand> = {
         await sendTo(message, "music", describeQueue(guildId, 1), intro)
         return
       }
-      if (arg === "berikutnya" || arg === "next") {
+      if (arg === "next") {
         await sendTo(message, "music", describeQueue(guildId, "next"), intro)
         return
       }
-      if (arg === "sebelumnya" || arg === "prev") {
+      if (arg === "prev") {
         await sendTo(message, "music", describeQueue(guildId, "prev"), intro)
         return
       }
@@ -225,8 +225,7 @@ export const commands: Record<string, BotCommand> = {
         await sendTo(message, "music", loopStatus(guildId), intro)
         return
       }
-      const mode =
-        arg === "satu" || arg === "one" ? "one" : arg === "semua" || arg === "all" ? "all" : arg === "mati" || arg === "off" ? "off" : null
+      const mode = arg === "one" ? "one" : arg === "all" ? "all" : arg === "off" ? "off" : null
       if (!mode) {
         await sendTo(message, "music", attachControls(guildId, warn("Unknown loop", "Use one, all, or off.")), intro)
         return

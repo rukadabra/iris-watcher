@@ -6,7 +6,7 @@ const channelId = "UCSJ4gkVC6NrvII8umztf0Ow"
 const videoId = "0sfDth4lMLc"
 
 describe("readLivePage", () => {
-  it("membaca siaran yang sedang live", () => {
+  it("reads a stream that is live", () => {
     const html = [
       `<link rel="canonical" href="https://www.youtube.com/watch?v=${videoId}">`,
       `"videoDetails":{"videoId":"${videoId}","title":"Night drive \\u0026 rain","lengthSeconds":"0","isLive":true`,
@@ -14,7 +14,7 @@ describe("readLivePage", () => {
     assert.deepEqual(readLivePage(html), { videoId, title: "Night drive & rain" })
   })
 
-  it("mengabaikan channel yang tidak sedang live", () => {
+  it("ignores a channel that is not live", () => {
     const html = [
       `<link rel="canonical" href="https://www.youtube.com/channel/${channelId}">`,
       `<meta property="og:title" content="Lofi Girl">`,
@@ -33,7 +33,7 @@ describe("readLivePage", () => {
 })
 
 describe("readChannelPage", () => {
-  it("membaca id dan nama channel", () => {
+  it("reads the channel id and name", () => {
     const html = [
       `<link rel="canonical" href="https://www.youtube.com/channel/${channelId}">`,
       `<meta property="og:title" content="Lofi Girl - YouTube">`,

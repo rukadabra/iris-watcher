@@ -13,7 +13,7 @@ const YOUTUBE_HOSTS = new Set(["youtube.com", "m.youtube.com", "music.youtube.co
 
 export function classifyPlayArgs(args: readonly string[]): PlayRequest {
   const freshWord = args[0]?.toLowerCase()
-  const fresh = freshWord === "new" || freshWord === "baru"
+  const fresh = freshWord === "new"
   const source = fresh ? args.slice(1) : args
   const items: YoutubeItem[] = []
 

@@ -5,7 +5,7 @@ import { classifyPlayArgs, parseYoutubeTarget } from "./youtube"
 const video = "abcdefghijk"
 
 describe("parseYoutubeTarget", () => {
-  it("membaca video, shorts, dan playlist", () => {
+  it("reads a video, shorts, and a playlist", () => {
     assert.deepEqual(parseYoutubeTarget(`https://youtu.be/${video}`), { type: "video", id: video })
     assert.deepEqual(parseYoutubeTarget(`https://www.youtube.com/watch?v=${video}&t=12`), {
       type: "video",
@@ -25,7 +25,7 @@ describe("parseYoutubeTarget", () => {
     )
   })
 
-  it("menganggap video di dalam playlist sebagai satu video", () => {
+  it("treats a video inside a playlist as one video", () => {
     assert.deepEqual(
       parseYoutubeTarget(`https://www.youtube.com/watch?v=${video}&list=PLabcdefghijk1234`),
       { type: "video", id: video },
@@ -36,36 +36,31 @@ describe("parseYoutubeTarget", () => {
     )
   })
 
-  it("menolak host lain", () => {
+  it("rejects another host", () => {
     assert.equal(parseYoutubeTarget("https://example.com/watch?v=abcdefghijk"), null)
-    assert.equal(parseYoutubeTarget("bukan-tautan"), null)
+    assert.equal(parseYoutubeTarget("not-a-link"), null)
   })
 })
 
 describe("classifyPlayArgs", () => {
-  it("menyimpan teks biasa sebagai pencarian YouTube", () => {
+  it("keeps plain text as a YouTube search", () => {
     assert.deepEqual(classifyPlayArgs(["despacito"]), {
       kind: "search",
       fresh: false,
       query: "despacito",
     })
-    assert.deepEqual(classifyPlayArgs(["new", "tema", "iris"]), {
+    assert.deepEqual(classifyPlayArgs(["new", "iris", "theme"]), {
       kind: "search",
       fresh: true,
-      query: "tema iris",
+      query: "iris theme",
     })
-    assert.deepEqual(classifyPlayArgs(["baru", "tema", "iris"]), {
-      kind: "search",
-      fresh: true,
-      query: "tema iris",
-    })
-    assert.deepEqual(classifyPlayArgs(["baru"]), { kind: "search", fresh: true, query: "" })
+    assert.deepEqual(classifyPlayArgs(["new"]), { kind: "search", fresh: true, query: "" })
   })
 
-  it("mengumpulkan beberapa tautan dan menandai playlist baru", () => {
+  it("collects several links and marks a new playlist", () => {
     assert.deepEqual(
       classifyPlayArgs([
-        "baru",
+        "new",
         `https://youtu.be/${video}`,
         "https://www.youtube.com/playlist?list=PLabcdefghijk1234",
       ]),

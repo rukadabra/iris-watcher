@@ -46,7 +46,7 @@ async function loadInnertube(): Promise<{ key: string; version: string }> {
   const html = await response.text()
   const key = /"INNERTUBE_API_KEY":"([^"]+)"/.exec(html)?.[1]
   const version = /"INNERTUBE_CLIENT_VERSION":"([^"]+)"/.exec(html)?.[1]
-  if (!key || !version) throw new Error("Klien YouTube tidak terbaca")
+  if (!key || !version) throw new Error("The YouTube client could not be read")
   innertube = { key, version }
   return innertube
 }

@@ -3,10 +3,10 @@ import { describe, it } from "node:test"
 import { parseMetadata } from "./metadata"
 
 describe("parseMetadata", () => {
-  it("membaca id dan judul, lalu mengabaikan baris rusak", () => {
-    const stdout = ["abcdefghijk\u001fLagu Pertama", "bukan-id\u001fLewat", "abcdefghijk\u001fDuplikat"].join(
+  it("reads the id and title, then skips broken lines", () => {
+    const stdout = ["abcdefghijk\u001fFirst Song", "not-an-id\u001fSkipped", "abcdefghijk\u001fDuplicate"].join(
       "\n",
     )
-    assert.deepEqual(parseMetadata(stdout), [{ id: "abcdefghijk", title: "Lagu Pertama" }])
+    assert.deepEqual(parseMetadata(stdout), [{ id: "abcdefghijk", title: "First Song" }])
   })
 })
