@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { rewriteMemberMentions, spokenReply } from "./ask"
+import { nameInSpoken, pickNamedMembers, rewriteMemberMentions, spokenReply } from "./ask"
 
 const leaked = [
   'Mention the member "Sales Dota 2" with the mention I was given. The user wants me to tag them and invite them to play Dota. This is an invitation, so I answer in character with one short line and no tool call.',
@@ -27,5 +27,44 @@ describe("rewriteMemberMentions", () => {
 
   it("tidak mengubah mention yang sudah benar", () => {
     assert.equal(rewriteMemberMentions("hai <@42>", [{ id: "42", name: "Sales Dota 2" }]), "hai <@42>")
+  })
+})
+
+describe("nameInSpoken", () => {
+  it("mengenali nama tampilan yang ditulis di pesan", () => {
+    assert.equal(nameInSpoken("tag sales dota 2, ajakin dia main dota", "Sales Dota 2"), true)
+  })
+
+  it("mengabaikan nama pendek satu kata supaya 'dota' tidak ikut", () => {
+    assert.equal(nameInSpoken("tag sales dota 2, ajakin dia main dota", "Dota"), false)
+  })
+})
+
+describe("pickNamedMembers", () => {
+  it("menemukan anggota dari nama di teks tanpa mention Discord", () => {
+    assert.deepEqual(
+      pickNamedMembers({
+        spoken: "tag sales dota 2, ajakin dia main dota",
+        mentioned: [],
+        candidates: [
+          { id: "42", name: "Sales Dota 2", aliases: ["Sales Dota 2", "salesdota"] },
+          { id: "7", name: "Dota", aliases: ["Dota"] },
+        ],
+        max: 3,
+      }),
+      [{ id: "42", name: "Sales Dota 2" }],
+    )
+  })
+
+  it("memakai mention Discord lebih dulu", () => {
+    assert.deepEqual(
+      pickNamedMembers({
+        spoken: "jawab pertanyaannya",
+        mentioned: [{ id: "42", name: "Sales Dota 2" }],
+        candidates: [{ id: "42", name: "Sales Dota 2", aliases: ["Sales Dota 2"] }],
+        max: 3,
+      }),
+      [{ id: "42", name: "Sales Dota 2" }],
+    )
   })
 })

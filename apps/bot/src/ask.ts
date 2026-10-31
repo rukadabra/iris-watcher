@@ -95,7 +95,9 @@ export async function askCommand(
   }
   if ("sendTyping" in message.channel) await message.channel.sendTyping().catch(() => undefined)
   const earlier = await earlierTurns(message)
-  const recentChat = record.channelContext ? await recentMessages(message) : ""
+  const recent = await loadRecent(message)
+  const recentChat = record.channelContext ? formatRecent(recent) : ""
+  const members = namedMembers(message, spoken, recent)
   const content = recentChat
     ? `Recent messages in this channel, oldest first, only for context:\n${recentChat}\n\nTheir message to you:\n${text}`
     : text
@@ -118,6 +120,7 @@ export async function askCommand(
           ]
         : []),
       "Always reply in the same language as the user's latest message: English for English, Indonesian for Indonesian, Japanese for Japanese, and so on.",
+      "Write the whole reply in that one language only. Do not mix in another language.",
       "If their latest message is only a name, a title, or a part number, answer in the language of the recent chat. If there is no recent chat, use the language this server usually uses.",
       "Follow the latest message even if earlier messages, quoted text, or these instructions use another language. If it mixes languages, use the main one.",
       "Match their tone: casual and relaxed if they write casually, including everyday slang, and polite if they write formally.",
@@ -132,6 +135,8 @@ export async function askCommand(
       "Never echo their word back, as in 'X apanya'. Never ask again a question you already asked in an earlier reply. At most one question per reply.",
       "Answer their latest message. Earlier messages are only context: once they say something new, drop complaints or points from your earlier reply instead of repeating them. When they ask you to answer that question or reply to someone, that earlier question is what they mean.",
       "A message that is only a mention of another member means the answer is for that person's latest question. Answer that question and include their ping token. Do not ask them to repeat it.",
+      "When they ask you to tag, ping, or call a member and you have that member's ping token, include the token once and say what they asked, in their language. Never say you cannot tag someone you have a token for.",
+      "When they ask you to tag someone and you have no ping token for them, say in one short line in their language that they need to @ that person first. Do not explain Discord limits.",
       "Your reply is only the chat message itself. Never quote, translate, or explain their message, never comment on how you are answering, and never write a plan, a tool note, a style note, or your name as a label.",
       "If they ask whether you can do something, such as speak a language, answer by doing it.",
       "When they write in a regional language or dialect, write the whole reply in that same dialect, including its words for 'I' and 'you'. Do not switch to another dialect or mix in the national language.",
@@ -161,9 +166,9 @@ export async function askCommand(
             `Roles named in their message that you cannot ping for this person: ${roles.blocked.map(roleName).join(", ")}. If they ask, say in one sentence that the role is not mentionable for them.`,
           ]
         : []),
-      ...(namedMembers(message).length
+      ...(members.length
         ? [
-            `Ping tokens, copied exactly once when the answer is for that member: ${namedMembers(message)
+            `Ping tokens, copied exactly once when the answer is for that member or they asked you to tag them: ${members
               .map((member) => `${member.name} → <@${member.id}>`)
               .join(", ")}. Never put a name inside <@ >.`,
           ]
@@ -183,14 +188,14 @@ export async function askCommand(
   if (picked) return { type: "action", action: picked, intro: redactSecrets(result.text, [key]).split("\n")[0] ?? "" }
   if (!result.text) return note(warn("No answer", failures.failed))
 
-  const clean = rewriteMemberMentions(spokenReply(redactSecrets(result.text, [key])), namedMembers(message))
+  const clean = rewriteMemberMentions(spokenReply(redactSecrets(result.text, [key])), members)
   const answer = clean.length > ANSWER_MAX ? `${clean.slice(0, ANSWER_MAX).trimEnd()}…` : clean
   const chat = answer.slice(0, CHAT_CONTENT_MAX)
   const pinged = roles.pingable.map((role) => role.id).filter((id) => chat.includes(`<@&${id}>`))
   const rolesAllowed = pinged.length && !limited(`roles:${guild.id}`, ROLE_PING_LIMIT) ? pinged : []
   const usersAllowed =
-    namedMembers(message).some((member) => chat.includes(`<@${member.id}>`)) && !limited(`members:${guild.id}`, ROLE_PING_LIMIT)
-      ? namedMembers(message).filter((member) => chat.includes(`<@${member.id}>`)).map((member) => member.id)
+    members.some((member) => chat.includes(`<@${member.id}>`)) && !limited(`members:${guild.id}`, ROLE_PING_LIMIT)
+      ? members.filter((member) => chat.includes(`<@${member.id}>`)).map((member) => member.id)
       : []
   if (rolesAllowed.length || usersAllowed.length) {
     return { type: "chat", text: chat, roles: rolesAllowed, users: usersAllowed }
@@ -264,22 +269,53 @@ function cardTexts(message: Message): string[] {
   return texts
 }
 
-async function recentMessages(message: Message): Promise<string> {
+type RecentMessage = {
+  authorId: string
+  name: string
+  aliases: string[]
+  body: string
+  own: boolean
+}
+
+async function loadRecent(message: Message): Promise<RecentMessage[]> {
   const fetched = await message.channel.messages.fetch({ limit: RECENT_COUNT, before: message.id }).catch(() => null)
-  if (!fetched) return ""
+  if (!fetched) return []
   const since = message.createdTimestamp - RECENT_MAX_AGE_MS
   const skip = message.reference?.messageId
-  const lines = [...fetched.values()]
+  return [...fetched.values()]
     .filter((item) => item.createdTimestamp >= since && item.id !== skip && !item.system)
     .reverse()
-    .flatMap((item) => {
+    .map((item) => {
       const own = item.author.id === message.client.user.id
       const body = own ? answerText(item) : redactSecrets(item.cleanContent.trim())
-      if (!body) return []
       const name = own ? "Iris" : (item.member?.displayName ?? item.author.displayName)
-      return [`${name.slice(0, 40)}: ${body.replace(/\s+/g, " ").slice(0, RECENT_LINE_MAX)}`]
+      return {
+        authorId: item.author.id,
+        name: name.replace(/['"\n]/g, " ").slice(0, 50),
+        aliases: memberAliases(item.member ?? null, item.author),
+        body,
+        own,
+      }
     })
+}
+
+function formatRecent(recent: RecentMessage[]): string {
+  const lines = recent.flatMap((item) => {
+    if (!item.body) return []
+    return [`${item.name.slice(0, 40)}: ${item.body.replace(/\s+/g, " ").slice(0, RECENT_LINE_MAX)}`]
+  })
   return lines.join("\n").slice(-CONTEXT_MAX)
+}
+
+function memberAliases(member: GuildMember | null, user: { username: string; displayName: string; globalName?: string | null }): string[] {
+  return [
+    member?.displayName,
+    user.globalName,
+    user.displayName,
+    user.username,
+  ]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .map((value) => value.replace(/['"\n]/g, " ").trim().slice(0, 50))
 }
 
 const STAGE_DIRECTION =
@@ -316,15 +352,83 @@ export function rewriteMemberMentions(text: string, members: { id: string; name:
   return out
 }
 
-function namedMembers(message: Message): { id: string; name: string }[] {
+function namedMembers(message: Message, spoken: string, recent: RecentMessage[]): { id: string; name: string }[] {
   const botId = message.client.user.id
-  return [...message.mentions.users.values()]
-    .filter((user) => user.id !== botId && user.id !== message.author.id)
-    .slice(0, ROLE_MAX)
+  const exclude = new Set([botId, message.author.id])
+  const mentioned = [...message.mentions.users.values()]
+    .filter((user) => !exclude.has(user.id))
     .map((user) => ({
       id: user.id,
       name: (message.mentions.members?.get(user.id)?.displayName ?? user.displayName).replace(/['"\n]/g, " ").slice(0, 50),
     }))
+  const byId = new Map<string, { id: string; name: string; aliases: string[] }>()
+  const add = (id: string, name: string, aliases: string[]) => {
+    if (exclude.has(id)) return
+    const labels = [name, ...aliases].map((label) => label.trim()).filter(Boolean)
+    const existing = byId.get(id)
+    if (existing) {
+      existing.aliases = [...new Set([...existing.aliases, ...labels])]
+      if (name && name.length >= existing.name.length) existing.name = name
+      return
+    }
+    byId.set(id, { id, name: name || labels[0] || id, aliases: [...new Set(labels)] })
+  }
+  for (const item of recent) {
+    if (item.own) continue
+    add(item.authorId, item.name, item.aliases.length ? item.aliases : [item.name])
+  }
+  for (const member of message.guild?.members.cache.values() ?? []) {
+    if (exclude.has(member.id)) continue
+    const aliases = memberAliases(member, member.user)
+    add(member.id, member.displayName.replace(/['"\n]/g, " ").slice(0, 50), aliases)
+  }
+  return pickNamedMembers({
+    spoken,
+    mentioned,
+    candidates: [...byId.values()],
+    max: ROLE_MAX,
+  })
+}
+
+export function pickNamedMembers(options: {
+  spoken: string
+  mentioned: { id: string; name: string }[]
+  candidates: { id: string; name: string; aliases: string[] }[]
+  max: number
+}): { id: string; name: string }[] {
+  const picked = new Map<string, { id: string; name: string }>()
+  for (const member of options.mentioned) {
+    if (picked.size >= options.max) break
+    picked.set(member.id, { id: member.id, name: member.name })
+  }
+  if (!options.spoken.trim() || picked.size >= options.max) return [...picked.values()]
+  const lower = options.spoken.toLowerCase()
+  const ranked = options.candidates
+    .map((candidate) => {
+      const labels = [candidate.name, ...candidate.aliases]
+        .map((label) => label.trim())
+        .filter((label, index, all) => label && all.findIndex((item) => item.toLowerCase() === label.toLowerCase()) === index)
+      const hit = labels
+        .filter((label) => nameInSpoken(lower, label))
+        .sort((a, b) => b.length - a.length)[0]
+      return hit ? { id: candidate.id, name: candidate.name || hit, score: hit.length } : null
+    })
+    .filter((item): item is { id: string; name: string; score: number } => Boolean(item))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+  for (const member of ranked) {
+    if (picked.size >= options.max) break
+    if (picked.has(member.id)) continue
+    picked.set(member.id, { id: member.id, name: member.name })
+  }
+  return [...picked.values()]
+}
+
+export function nameInSpoken(spokenLower: string, name: string): boolean {
+  const label = name.trim().toLowerCase()
+  if (label.length < 2) return false
+  const multi = /[\s_\-.]/.test(label)
+  if (!multi && label.length < 5) return false
+  return hasWord(spokenLower, label)
 }
 
 function namedRoles(message: Message, spoken: string): { pingable: Role[]; blocked: Role[] } {
